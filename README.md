@@ -1,8 +1,12 @@
-# Skills
+# Personal agent configuration
 
-A collection of [Agent Skills](https://agentskills.io) for Cursor, Claude Code, Codex, and [other supported agents](https://github.com/vercel-labs/skills#supported-agents). Locally authored skills live under [`skills/personal/`](skills/personal/)
+Personal configuration shared across coding agents. The repo currently tracks:
 
-## Install
+- agent working instructions in [`AGENTS.md`](AGENTS.md)
+- personal coding standards in [`CODING.md`](CODING.md)
+- locally authored [Agent Skills](https://agentskills.io) under [`skills/personal/`](skills/personal/)
+
+## Install skills
 
 ### Whole collection
 
@@ -50,14 +54,16 @@ npx skills add ./skills/personal/microsoft-exam-docs
 
 Symlink installs are recommended when the CLI prompts you; they keep a single copy easy to update with `npx skills update`.
 
-## Skills layout
+## Repository layout
 
 ```
-skills/
-└── personal/        # Tracked, locally authored skills
+.
+├── AGENTS.md        # Shared agent instructions
+├── CODING.md        # Personal coding standards
+├── pets/            # Codex pet assets and configuration
+└── skills/
+    └── personal/    # Tracked, locally authored skills
 ```
-
-Third-party skills installed alongside `personal/` are ignored by Git. Their source and update metadata remains in `.skill-lock.json`.
 
 ## Personal skills
 
