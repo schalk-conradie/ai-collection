@@ -8,13 +8,9 @@
 # Node
 node_modules/
 
-# Microsoft
-microsoft-foundry/
-azure-*/
-entra-*/
-python-*/
-airunway-*
-appinsights-*/
+# Third-party installed skills
+skills/*
+!skills/personal/
+!skills/personal/**
 
-# Vercel
-native-sdk/
+.skill-lock.json

@@ -23,4 +23,4 @@
 - **OS & package managers**: Detect the current operating system before selecting commands or installation steps. Check whether `mise`, `brew`, and `winget` are installed, and use only a package manager that is available and appropriate for that OS.
 - **Shells**: On Windows, use PowerShell 7 where possible instead of CMD. On macOS, always use `zsh` when it is available.
 - **Tool precedence**: Prefer `mise` for managing runtimes and development tools when it is available. For .NET work, use the installed .NET tooling (`dotnet` and its supported SDK/workload mechanisms) instead of `mise`; otherwise use the appropriate available system package manager.
-- **Personal skills**: Create and install personal skills only in `~/.agents/skills`, never in `~/.codex/skills`.
+- **Personal skills**: Create and install personal skills only in `~/.agents/skills/personal`, never in `~/.codex/skills`.

@@ -1,8 +1,6 @@
 # Skills
 
-A collection of [Agent Skills](https://agentskills.io) for Cursor, Claude Code, Codex, and [other supported agents](https://github.com/vercel-labs/skills#supported-agents). Skills are grouped by domain under [`skills/`](skills/).
-
-Browse and discover skills on [skills.sh](https://skills.sh). Install and manage them with the [`skills` CLI](https://github.com/vercel-labs/skills).
+A collection of [Agent Skills](https://agentskills.io) for Cursor, Claude Code, Codex, and [other supported agents](https://github.com/vercel-labs/skills#supported-agents). Locally authored skills live under [`skills/personal/`](skills/personal/)
 
 ## Install
 
@@ -24,7 +22,7 @@ npx skills add schalk-conradie/skills --all -g -y
 Use the skill `name` from each skill’s `SKILL.md` frontmatter (see table below):
 
 ```bash
-npx skills add schalk-conradie/skills --skill dynamics-webapi --skill generate-visual
+npx skills add schalk-conradie/skills --skill dynamics-webapi --skill search-branium
 
 # Shorthand: repo@skill
 npx skills add schalk-conradie/skills@microsoft-exam-docs
@@ -40,7 +38,7 @@ git clone https://github.com/schalk-conradie/skills.git
 cd skills
 
 npx skills add .
-npx skills add ./skills/study/microsoft-exam-docs
+npx skills add ./skills/personal/microsoft-exam-docs
 ```
 
 ### Install scope
@@ -56,42 +54,24 @@ Symlink installs are recommended when the CLI prompts you; they keep a single co
 
 ```
 skills/
-├── documentation/   # D365 as-built, HTML visuals
-├── dynamics/        # Dataverse / Dynamics 365 Web API
-├── personal/        # Convex self-host, Vite + shadcn stack bootstrap
-├── study/           # Microsoft Learn exam material and study tools
-└── engineering/     # (reserved)
+└── personal/        # Tracked, locally authored skills
 ```
 
-## Available skills
+Third-party skills installed alongside `personal/` are ignored by Git. Their source and update metadata remains in `.skill-lock.json`.
 
-### Documentation
-
-| Skill | Path | Description |
-|-------|------|-------------|
-| [d365-asbuilt](skills/documentation/d365-asbuilt/SKILL.md) | `documentation/d365-asbuilt` | Dynamics 365 as-built documentation from solution exports; chapter extraction, flow diagrams, Word cleanup |
-| [generate-visual](skills/documentation/generate-visual/SKILL.md) | `documentation/generate-visual` | Self-contained single-file HTML artifacts (decks, reports, diagrams, prototypes) instead of markdown |
-
-### Dynamics
+## Personal skills
 
 | Skill | Path | Description |
 |-------|------|-------------|
-| [dynamics-webapi](skills/dynamics/dynamics-webapi/SKILL.md) | `dynamics/dynamics-webapi` | Read-only Dynamics 365 / Dataverse Web API queries (requires `token.json`) |
-
-### Personal
-
-| Skill | Path | Description |
-|-------|------|-------------|
-| [convex-self-host](skills/personal/convex-self-host/SKILL.md) | `personal/convex-self-host` | Bootstrap self-hosted Convex with Docker Compose |
-| [vite-react-shadcn-convex-setup](skills/personal/vite-react-shadcn-convex-setup/SKILL.md) | `personal/vite-react-shadcn-convex-setup` | In-place Vite + React + TypeScript + Tailwind + shadcn/ui + Zod + Zustand + TanStack Query + Convex |
-
-### Study
-
-| Skill | Path | Description |
-|-------|------|-------------|
-| [microsoft-exam-docs](skills/study/microsoft-exam-docs/SKILL.md) | `study/microsoft-exam-docs` | Download Microsoft Learn training material for a certification exam code |
-| [create-study-guide](skills/study/create-study-guide/SKILL.md) | `study/create-study-guide` | Turn downloaded `CONTENT.md` into a concise `STUDY_GUIDE.md` |
-| [exam-qa-generator](skills/study/exam-qa-generator/SKILL.md) | `study/exam-qa-generator` | Generate multiple-choice / multiple-select practice Q&A JSON from Learn material |
+| [auth-dynamics](skills/personal/auth-dynamics/SKILL.md) | `personal/auth-dynamics` | Get or refresh a Dynamics 365 / Dataverse Web API bearer token |
+| [create-custom-ui-registry](skills/personal/create-custom-ui-registry/SKILL.md) | `personal/create-custom-ui-registry` | Create and publish a custom shadcn/ui registry for create-ec-app |
+| [create-study-guide](skills/personal/create-study-guide/SKILL.md) | `personal/create-study-guide` | Turn downloaded `CONTENT.md` into a concise `STUDY_GUIDE.md` |
+| [document-branium](skills/personal/document-branium/SKILL.md) | `personal/document-branium` | Create or update project and Home notes in the Brainium vault |
+| [dynamics-webapi](skills/personal/dynamics-webapi/SKILL.md) | `personal/dynamics-webapi` | Read-only Dynamics 365 / Dataverse Web API queries |
+| [exam-qa-generator](skills/personal/exam-qa-generator/SKILL.md) | `personal/exam-qa-generator` | Generate multiple-choice / multiple-select practice Q&A JSON from Learn material |
+| [microsoft-exam-docs](skills/personal/microsoft-exam-docs/SKILL.md) | `personal/microsoft-exam-docs` | Download Microsoft Learn training material for a certification exam code |
+| [search-branium](skills/personal/search-branium/SKILL.md) | `personal/search-branium` | Search and retrieve project or Home context from the Brainium vault |
+| [update-standards](skills/personal/update-standards/SKILL.md) | `personal/update-standards` | Capture coding preferences as durable personal standards |
 
 Typical study workflow: `microsoft-exam-docs` → `create-study-guide` → `exam-qa-generator`.
 
@@ -104,7 +84,3 @@ npx skills update
 npx skills update dynamics-webapi
 npx skills remove dynamics-webapi
 ```
-
-## Publishing
-
-There is no separate publish step for [skills.sh](https://skills.sh): host skills in this git repo and share the repo URL. Installs via `npx skills add schalk-conradie/skills` register usage on the skills directory over time.
