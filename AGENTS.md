@@ -1,5 +1,6 @@
 # Working Style
 
+- Always read and follow `~/.agents/STYLE.md` when replying, writing, reporting, or producing other prose. Apply it to explanations, status updates, documentation, code comments, and other user-facing text.
 - Lead with the outcome. Default to concise answers, short paragraphs, and useful bullets. Avoid walls of text; expand when asked or when risk requires it.
 - Solve the real problem with the smallest clear change. Read the relevant code path before editing; do not guess.
 
