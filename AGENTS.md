@@ -17,7 +17,7 @@
 - Fix root causes without unrelated refactoring. Preserve meaningful errors.
 - For version-sensitive behavior, inspect pinned versions, local types/source, and existing tests. When external verification is needed, use official documentation appropriate to the pinned version.
 - Add the smallest useful test for non-trivial behavior changes. Report any relevant checks that were not run.
-- Before modifying code, read and follow `~/.codex/CODING.md`. Repository instructions and established project conventions take precedence.
+- Before modifying code, read and follow `~/.agents/CODING.md`. Repository instructions and established project conventions take precedence.
 
 # Environment
 
