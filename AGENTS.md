@@ -25,3 +25,6 @@
 - **Shells**: On Windows, use PowerShell 7 where possible instead of CMD. On macOS, always use `zsh` when it is available.
 - **Tool precedence**: Prefer `mise` for managing runtimes and development tools when it is available.
 - **Personal skills**: Create and install personal skills only in `~/.agents/skills/personal`, never in `~/.codex/skills`.
+
+# Dynamics 365 and Power Automate
+- **Solutions**: Whenever you are working with changes within Dynamics 365 and make.powerapps.com (and powerautomate.com), Please ensure that you are working in the correct solution and only pull in components needed by your change. It should almost never be necessary to pull in the entire component and all dependencies. If you have any questions, please ask the user first, and also ask the user what solution to be used.
