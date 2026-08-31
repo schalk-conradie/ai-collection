@@ -20,8 +20,13 @@ Only add a rule after encountering concrete, recurring friction.
 
 - Do not add dependencies when the standard library, platform, or an installed dependency adequately solves the problem.
 
+
+
 ## TypeScript
+
+
 
 ### Types and boundaries
 
 - Validate data at external or untyped boundaries. Avoid redundant runtime checks for trusted internal values whose ownership and types already establish validity.
+

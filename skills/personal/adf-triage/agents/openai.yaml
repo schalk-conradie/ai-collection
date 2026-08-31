@@ -1,0 +1,3 @@
+interface:
+  display_name: "ADF triage"
+  short_description: "Trace ADF load issues with live run, SQL, and Dataverse evidence"
