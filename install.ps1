@@ -120,14 +120,17 @@ else {
 $agentsSource = Join-Path $AgentsDir "AGENTS.md"
 $claudeSource = Join-Path $AgentsDir "CLAUDE.md"
 $skillsSource = Join-Path $AgentsDir "skills/personal"
+$customAgentsSource = Join-Path $AgentsDir "agents"
 if (-not (Test-Path -LiteralPath $agentsSource -PathType Leaf)) { throw "Missing source file: $agentsSource" }
 if (-not (Test-Path -LiteralPath $claudeSource -PathType Leaf)) { throw "Missing source file: $claudeSource" }
 if (-not (Test-Path -LiteralPath $skillsSource -PathType Container)) { throw "Missing skills directory: $skillsSource" }
+if (-not (Test-Path -LiteralPath $customAgentsSource -PathType Container)) { throw "Missing custom agents directory: $customAgentsSource" }
 
 $codexDirectory = Join-Path $HOME ".codex"
 $claudeDirectory = Join-Path $HOME ".claude"
 $claudeSkills = Join-Path $claudeDirectory "skills"
 $codexTarget = Join-Path $codexDirectory "AGENTS.md"
+$codexAgents = Join-Path $codexDirectory "agents"
 $claudeTarget = Join-Path $claudeDirectory "CLAUDE.md"
 $skillSources = @(
     Get-ChildItem -LiteralPath $skillsSource -Directory |
@@ -135,18 +138,30 @@ $skillSources = @(
         Sort-Object Name
 )
 if ($skillSources.Count -eq 0) { throw "No skills found in $skillsSource" }
+$customAgentSources = @(
+    Get-ChildItem -LiteralPath $customAgentsSource -File -Filter "*.toml" |
+        Sort-Object Name
+)
+if ($customAgentSources.Count -eq 0) { throw "No custom agents found in $customAgentsSource" }
 
 Assert-TargetAvailable -Source $agentsSource -Target $codexTarget
 Assert-TargetAvailable -Source $claudeSource -Target $claudeTarget
+foreach ($customAgentSource in $customAgentSources) {
+    Assert-TargetAvailable -Source $customAgentSource.FullName -Target (Join-Path $codexAgents $customAgentSource.Name)
+}
 foreach ($skillSource in $skillSources) {
     Assert-TargetAvailable -Source $skillSource.FullName -Target (Join-Path $claudeSkills $skillSource.Name)
 }
 
 New-Item -ItemType Directory -Path $codexDirectory -Force | Out-Null
+New-Item -ItemType Directory -Path $codexAgents -Force | Out-Null
 New-Item -ItemType Directory -Path $claudeDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $claudeSkills -Force | Out-Null
 Install-PathLink -Source $agentsSource -Target $codexTarget
 Install-PathLink -Source $claudeSource -Target $claudeTarget
+foreach ($customAgentSource in $customAgentSources) {
+    Install-PathLink -Source $customAgentSource.FullName -Target (Join-Path $codexAgents $customAgentSource.Name)
+}
 foreach ($skillSource in $skillSources) {
     Install-PathLink -Source $skillSource.FullName -Target (Join-Path $claudeSkills $skillSource.Name) -Directory
 }
@@ -169,6 +184,21 @@ foreach ($entry in Get-ChildItem -LiteralPath $claudeSkills -Force) {
     if (-not (Test-Path -LiteralPath (Join-Path $resolvedTarget "SKILL.md") -PathType Leaf)) {
         Remove-Item -LiteralPath $entry.FullName -Force
         Write-Host "Removed stale skill link: $($entry.FullName)"
+    }
+}
+
+$customAgentsRootPath = [IO.Path]::GetFullPath($customAgentsSource).TrimEnd(
+    [IO.Path]::DirectorySeparatorChar,
+    [IO.Path]::AltDirectorySeparatorChar
+) + [IO.Path]::DirectorySeparatorChar
+foreach ($entry in Get-ChildItem -LiteralPath $codexAgents -File -Filter "*.toml" -Force) {
+    $resolvedTarget = Resolve-LinkTarget -Item $entry -Target $entry.FullName
+    if (-not $resolvedTarget -or -not $resolvedTarget.StartsWith($customAgentsRootPath, $comparison)) {
+        continue
+    }
+    if (-not (Test-Path -LiteralPath $resolvedTarget -PathType Leaf)) {
+        Remove-Item -LiteralPath $entry.FullName -Force
+        Write-Host "Removed stale custom agent link: $($entry.FullName)"
     }
 }
 

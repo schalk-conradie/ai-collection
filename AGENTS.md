@@ -6,7 +6,10 @@
 
 # Autonomy
 
-- Do not use subagents unless I explicitly ask.
+- Use subagents for bounded, independent grunt work when delegation will save time or model usage. Keep small tasks local when the handoff would cost more than the work.
+- Delegate routine browser navigation, repetitive tool use, status checks, polling, data collection, extraction, and similar execution work to `gpt-5.6-luna` with `high` reasoning in Standard mode. Do not enable Fast mode for this work.
+- Give grunt-work subagents a focused prompt and the minimum necessary conversation history. Prefer no inherited history when the prompt contains all required context.
+- Keep root-cause diagnosis, architecture, destructive changes, production-risk decisions, and cross-system synthesis on the main agent or escalate them to Terra or Sol. Use the lowest-cost model that can complete the task reliably.
 - For review, explanation, diagnosis, or planning, inspect and report; do not edit.
 - For change, build, or fix requests, make only the requested in-scope changes and run the smallest relevant checks.
 - Ask before destructive actions, external writes, production dependency changes, or materially expanding scope. Do not commit or push unless asked.

@@ -3,6 +3,7 @@
 Personal configuration shared across coding agents. The repo currently tracks:
 
 - agent working instructions in [`AGENTS.md`](AGENTS.md)
+- Codex custom agents under [`agents/`](agents/)
 - Claude's global loader in [`CLAUDE.md`](CLAUDE.md)
 - personal coding standards in [`CODING.md`](CODING.md)
 - locally authored [Agent Skills](https://agentskills.io) under [`skills/personal/`](skills/personal/)
@@ -14,14 +15,15 @@ The installers clone this repository to `~/.agents`, create `~/.codex` and
 
 ```text
 ~/.codex/AGENTS.md   -> ~/.agents/AGENTS.md
+~/.codex/agents/*    -> ~/.agents/agents/*
 ~/.claude/CLAUDE.md  -> ~/.agents/CLAUDE.md
 ~/.claude/skills/*   -> ~/.agents/skills/personal/*
 ```
 
 `CLAUDE.md` imports `~/.agents/AGENTS.md`, so both agents use the same shared
-instructions. Each personal skill is linked separately so Claude-specific skills
-remain in place. `~/.agents` remains the place to edit shared instructions and
-personal skills.
+instructions. The installer links each custom agent and personal skill separately
+so files managed by other tools remain in place. `~/.agents` remains the place to
+edit shared instructions, custom agents, and personal skills.
 
 On macOS or Linux, download and inspect the installer, then run it:
 
@@ -54,6 +56,19 @@ pull, reset, commit, or push it.
 The installer removes stale skill links only when they point into
 `~/.agents/skills/personal` and their source skill no longer exists. It does not
 remove Claude-only skills, plugin skills, or links managed by another tool.
+It applies the same rule to custom agent links under `~/.codex/agents`.
+
+## Custom Codex agents
+
+The bootstrap installs these Standard-mode agents:
+
+| Agent | Model | Use |
+|-------|-------|-----|
+| `browser_worker` | GPT-5.6 Luna, high reasoning | Read-only browser navigation, page inspection, polling, screenshots, and data collection |
+| `grunt_worker` | GPT-5.6 Luna, high reasoning | Bounded file discovery, log collection, repetitive checks, routine tests, extraction, and summaries |
+
+Both files set `service_tier = "default"`, which keeps Fast mode off. Add new
+personal agents under `agents/`, then rerun the installer to expose them to Codex.
 
 ## Install skills
 
@@ -112,6 +127,7 @@ Symlink installs are recommended when the CLI prompts you; they keep a single co
 ```
 .
 ├── AGENTS.md        # Shared agent instructions
+├── agents/          # Tracked Codex custom agents
 ├── CLAUDE.md        # Claude loader for the shared instructions
 ├── CODING.md        # Personal coding standards
 ├── install.sh       # macOS and Linux bootstrap

@@ -12,6 +12,7 @@ Usage: install.sh [--repo URL] [--force]
 
 Clone the personal agent configuration into ~/.agents and create these links:
   ~/.codex/AGENTS.md   -> ~/.agents/AGENTS.md
+  ~/.codex/agents/*    -> ~/.agents/agents/*
   ~/.claude/CLAUDE.md  -> ~/.agents/CLAUDE.md
   ~/.claude/skills/*   -> ~/.agents/skills/personal/*
 
@@ -64,10 +65,12 @@ fi
 agents_source="$agents_dir/AGENTS.md"
 claude_source="$agents_dir/CLAUDE.md"
 skills_source="$agents_dir/skills/personal"
+custom_agents_source="$agents_dir/agents"
 
 [ -f "$agents_source" ] || fail "missing source file: $agents_source"
 [ -f "$claude_source" ] || fail "missing source file: $claude_source"
 [ -d "$skills_source" ] || fail "missing skills directory: $skills_source"
+[ -d "$custom_agents_source" ] || fail "missing custom agents directory: $custom_agents_source"
 
 canonical_file() {
   file_dir=$(dirname "$1")
@@ -161,9 +164,29 @@ remove_stale_skill_links() {
   done
 }
 
+remove_stale_agent_links() {
+  source_root=$(canonical_file "$1")
+  target_root=$2
+
+  [ -d "$target_root" ] || return
+  for target_path in "$target_root"/*.toml; do
+    [ -L "$target_path" ] || continue
+    resolved_path=$(resolve_link_target "$target_path") || continue
+    case "$resolved_path" in
+      "$source_root"/*)
+        if [ ! -f "$resolved_path" ]; then
+          rm "$target_path"
+          printf 'Removed stale custom agent link: %s\n' "$target_path"
+        fi
+        ;;
+    esac
+  done
+}
+
 codex_target="$HOME/.codex/AGENTS.md"
 claude_target="$HOME/.claude/CLAUDE.md"
 claude_skills="$HOME/.claude/skills"
+codex_agents="$HOME/.codex/agents"
 
 preflight_target "$agents_source" "$codex_target"
 preflight_target "$claude_source" "$claude_target"
@@ -178,9 +201,24 @@ for skill_source in "$skills_source"/*; do
 done
 [ "$skills_found" -eq 1 ] || fail "no skills found in $skills_source"
 
-mkdir -p "$HOME/.codex" "$HOME/.claude" "$claude_skills"
+agents_found=0
+for custom_agent_source in "$custom_agents_source"/*.toml; do
+  [ -f "$custom_agent_source" ] || continue
+  agents_found=1
+  custom_agent_name=$(basename "$custom_agent_source")
+  preflight_target "$custom_agent_source" "$codex_agents/$custom_agent_name"
+done
+[ "$agents_found" -eq 1 ] || fail "no custom agents found in $custom_agents_source"
+
+mkdir -p "$HOME/.codex" "$codex_agents" "$HOME/.claude" "$claude_skills"
 install_link "$agents_source" "$codex_target"
 install_link "$claude_source" "$claude_target"
+
+for custom_agent_source in "$custom_agents_source"/*.toml; do
+  [ -f "$custom_agent_source" ] || continue
+  custom_agent_name=$(basename "$custom_agent_source")
+  install_link "$custom_agent_source" "$codex_agents/$custom_agent_name"
+done
 
 for skill_source in "$skills_source"/*; do
   [ -d "$skill_source" ] || continue
@@ -190,5 +228,6 @@ for skill_source in "$skills_source"/*; do
 done
 
 remove_stale_skill_links "$skills_source" "$claude_skills"
+remove_stale_agent_links "$custom_agents_source" "$codex_agents"
 
 printf 'Agent configuration is ready. Edit shared files in %s.\n' "$agents_dir"
