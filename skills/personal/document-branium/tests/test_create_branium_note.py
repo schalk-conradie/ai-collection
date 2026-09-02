@@ -262,6 +262,19 @@ class CreateBraniumNoteTests(unittest.TestCase):
         self.assertNotIn("source_path:", home_result.stdout)
         self.assertNotIn("\nSource:", home_result.stdout)
 
+    def test_windows_repo_path_matches_by_folder_name_from_subdirectory(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            vault = root / "vault"
+            vault.mkdir()
+            self.write_registry(vault, repo_path=Path(r"C:\Users\Schalk\Code\SBS - Application Forms"))
+            cwd = root / "Code" / "work" / "SBS - Application Forms" / "src"
+            result = self.run_script(vault, "--cwd", str(cwd), "--title", "Context", "--dry-run")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("project: 'SBS - Application Forms'", result.stdout)
+        self.assertIn(f"source_path: '{cwd.resolve()}'", result.stdout)
+
     def test_external_cwd_source_is_unchanged(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

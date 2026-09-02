@@ -1,219 +1,127 @@
 ---
 name: document-branium
-description: Create or update project and Home notes in the user's Obsidian vault at `C:\Users\Schalk\Documents\The Brainium`. Use when the user says phrases like "Document this change in the branium", "document this in Brainium", "add this to my second brain", or asks Codex to capture project/client context, Home context, implementation notes, decisions, fixes, todos, shopping lists, documents, maintenance, inventory, or important household information into the vault.
+description: Create or update project and Home notes in the user's Obsidian vault, The Brainium, at ~/Documents/The Brainium. Use when the user says "document this in the branium", "add this to my second brain", or asks to capture project or client context, implementation notes, decisions, fixes, meeting notes, or household information such as todos, shopping lists, documents, maintenance, or inventory.
 ---
 
 # Document Branium
 
-## Overview
+Turn the current work or conversation into one short note in the right place in the vault. The note should still be useful in six months and should not duplicate an existing note.
 
-Use this skill to turn the current work context into a concise Brainium note under the correct area:
+## Vault layout
 
-- **Client/project work** goes under the matching client/project folder.
-- **Home and household information** goes under `100 Home`.
+The vault root is `~/Documents/The Brainium` on every machine. `BRAINIUM_VAULT` or `--vault` overrides it.
 
-The vault root is:
-
-```text
-C:\Users\Schalk\Documents\The Brainium
-```
-
-The project routing registry is used only for client/project notes:
-
-```text
-C:\Users\Schalk\Documents\The Brainium\99 Meta\project-registry.json
-```
-
-## Home Structure
-
-The Home area is an active household second-brain area, not a client/project.
-
-Use these existing notes first instead of creating duplicates:
-
-| Need | Note |
+| Path | Purpose |
 | --- | --- |
-| Home dashboard / index | `100 Home/00 Home Dashboard.md` |
-| Current household actions | `100 Home/Tasks/Current Todo.md` |
-| Shopping and restock list | `100 Home/Lists/Shopping List.md` |
-| Important household reference info | `100 Home/Important Information/Important Information.md` |
-| Document locations and renewals | `100 Home/Documents/Document Register.md` |
-| Repairs, service history, recurring care | `100 Home/Maintenance/Maintenance Log.md` |
-| Valuables, serial numbers, warranties | `100 Home/Inventory/Home Inventory.md` |
-| Multi-step household efforts | `100 Home/Projects/Home Projects.md` |
-| Temporary household inbox | `100 Home/Quick Notes/Home Quick Notes.md` |
-| Completed or stale Home notes | `100 Home/Archive/Home Archive.md` |
+| `10 Clients/<Client>/Projects/<Client code> - <Project>/` | Client and project work. Notes go in `Changes`, `Decisions`, or `Notes` under the project. |
+| `100 Home/` | Household second brain. Not a client or project. |
+| `90 Templates/` | Note templates. Home templates are under `90 Templates/Home` and are prefixed with `Home`. |
+| `99 Meta/project-registry.json` | Routing registry for project notes. Maps `repoPath` to `client`, `project`, and `projectFolder`. |
+| `AGENTS.md` | Vault conventions. Read it when a convention here is unclear. |
 
-Home templates live in:
+Client codes in folder names:
 
-```text
-C:\Users\Schalk\Documents\The Brainium\90 Templates\Home
-```
-
-Every Home-specific template is prefixed with `Home`, for example `Home Quick Note.md`, `Home Project.md`, and `Home Shopping List.md`.
-
-Do not store passwords, secret recovery codes, or sensitive IDs in Home notes. Refer to a password manager or secure storage location instead.
-
-## Project Folder Naming
-
-Project folders are generally named `Client - Project`, where the leading code maps to a default client context:
-
-| Code | Default client |
+| Code | Client |
 | --- | --- |
 | AGR | Allan Gray Retail |
 | AGI | Allan Gray Institutional |
 | E6 | Element 6 |
 | EC | Enterprise cloud |
-| SBS | SBS |
+| SBS | SBS (Stellenbosch Business School is an accepted alias) |
 
-`SBS` is the canonical client key and folder name; `Stellenbosch Business School` is accepted as a human-readable alias.
+When clear repo, folder, or vault evidence reveals a new code, update this table, the same table in `~/.agents/skills/personal/search-branium/SKILL.md`, and the vault `AGENTS.md`. Never infer a mapping from the code alone.
 
-When a clear repo, folder, or vault clue reveals a new code mapping, self-heal the convention by updating this section, the matching section in `C:\Users\Schalk\.agents\skills\personal\search-branium\SKILL.md`, and `C:\Users\Schalk\Documents\The Brainium\AGENTS.md`. Do not infer a new mapping from the code alone; ask if the evidence is unclear.
+## Home notes
 
-## Workflow
+Home content goes into the existing register or list. Only create a new note for a multi-step project or a capture with no clear destination yet.
 
-1. Decide whether this is **Home** or **client/project** context.
-   - Use **Home** when the user mentions home, household, personal admin, current todo, shopping, documents, important information, maintenance, inventory, service providers, routines, or a path under `100 Home`.
-   - Use **client/project** when the context is a repo, client, implementation change, delivery decision, system design, work meeting, or project folder.
-   - If both are plausible and the user did not make the target clear, ask one concise question instead of guessing.
+| Content | Note |
+| --- | --- |
+| Dashboard | `100 Home/00 Home Dashboard.md` |
+| Current actions | `100 Home/Tasks/Current Todo.md` |
+| Shopping and restock | `100 Home/Lists/Shopping List.md` |
+| Household reference info | `100 Home/Important Information/Important Information.md` |
+| Document locations and renewals | `100 Home/Documents/Document Register.md` |
+| Repairs, service history, recurring care | `100 Home/Maintenance/Maintenance Log.md` |
+| Valuables, serials, warranties | `100 Home/Inventory/Home Inventory.md` |
+| Multi-step household efforts | `100 Home/Projects/Home Projects.md` plus a `Home Project` note |
+| Unsorted capture | `100 Home/Quick Notes/Home Quick Notes.md` |
 
-2. For Home context, route to the smallest useful existing note.
-   - Current task or reminder: update `100 Home/Tasks/Current Todo.md`.
-   - Shopping/restock item: update `100 Home/Lists/Shopping List.md`.
-   - Household reference detail: update `100 Home/Important Information/Important Information.md`.
-   - Document/admin/renewal detail: update `100 Home/Documents/Document Register.md`.
-   - Repair, service, or recurring care: update `100 Home/Maintenance/Maintenance Log.md`.
-   - Valuable item, warranty, receipt, or serial number: update `100 Home/Inventory/Home Inventory.md`.
-   - Multi-step household effort: add/link it from `100 Home/Projects/Home Projects.md` and create a Home Project note if needed.
-   - Messy capture with no clear destination yet: add it to `100 Home/Quick Notes/Home Quick Notes.md` or create a Home Quick Note.
-   - Prefer updating the active list/register over creating a duplicate dated note.
+Never store passwords, recovery codes, or sensitive IDs in Home notes. Point to the password manager instead.
 
-3. For client/project context, trace the current project before writing a note.
-   - Get the current directory and, if available, the git repo root.
-   - Inspect the relevant files, changed files, branch, and verification commands from the current task.
-   - Use user-provided context first when it is more specific than repo metadata.
+## Routing
 
-4. Resolve the client/project when needed.
-   - Prefer the longest matching `repoPath` in `99 Meta/project-registry.json`.
-   - If the user explicitly named a client/project, use that and check the registry for the matching `projectFolder`.
-   - If a repo or folder name follows `Client - Project`, use the project-folder naming map as the default client context unless stronger observed evidence says otherwise.
-   - If the client/project is unclear, ask one concise question instead of guessing.
-   - Project writes require an existing entry in `99 Meta\project-registry.json`. Never invent a synthetic route from command-line client/project values.
-   - If a new project is obvious but unregistered, update the vault and registry as a separate, deliberate step before creating its project note.
+Home when the user talks about home, household, personal admin, todos, shopping, documents, maintenance, inventory, providers, or routines. Project when the context is a repo, client, implementation change, delivery decision, or work meeting. If both fit and the user did not say, ask one question.
 
-5. Choose the note type.
-   - For client/project notes, default to `change`.
-   - Use `decision` only for an architectural, delivery, or business decision.
-   - Use `note` for general project context that is not tied to a change.
-   - Use the specialized project types when the request is clearly one of them: `meeting`, `adr`, `investigation`, `incident`, `plan`, `architecture`, `technical-design`, `as-built`, `handoff`, or `conversation`.
-   - File client/project `adr` and `decision` notes under `Decisions`; file the other specialized project note types under `Notes` unless the script's existing folder map says otherwise.
-   - For Home notes, use Home types such as `home-note`, `home-quick-note`, `home-project`, `home-service-provider`, `home-routine`, `home-shopping-list`, `home-document-register`, `home-important-information`, `home-maintenance-log`, `home-inventory`, or `home-todo`.
-   - `home-todo` is canonical. The script accepts legacy `home-current-todo` input but writes `type: home-todo`.
+For project notes, the registry is the source of truth. Routing works in this order:
 
-6. Write compact, factual content.
-   - For project changes, include what changed, why, files touched, verification, and follow-up.
-   - For Home, include only the information needed to act later: task, item, date, provider, location, renewal, cost, status, and links where useful.
-   - Include failed or skipped verification explicitly for project work.
-   - Link to the relevant client/project pages or the Home dashboard.
-   - Do not invent Dataverse, client, repo, household, provider, warranty, or document facts that were not observed or supplied.
+1. `--client` and `--project` naming an existing registry entry.
+2. The current directory matching a registry `repoPath` by prefix.
+3. The current directory, or one of its parents, matching the last folder name of a registry `repoPath`. This is what routes on macOS, because the registry records Windows paths such as `C:\Users\Schalk\Code\AGR - SWOT Rewrite`.
 
-7. Create or update the note.
-   - For active Home lists/registers, edit the existing Home note directly.
-   - For new Home notes, use the matching `90 Templates/Home/Home ...` template shape.
-   - For scripted creation, use `scripts/create_branium_note.py`.
+If none of those match, stop. Do not invent a route. Registering a new project in `99 Meta/project-registry.json` and creating its folder is a separate, deliberate step you should confirm with the user first.
 
-## Script Usage
+## Note types
 
-Use the bundled script from this skill folder.
+Project types and where they land. Default to `change`.
 
-Client/project example:
+| Type | Folder | Use |
+| --- | --- | --- |
+| `change` | Changes | Implementation notes and fixes |
+| `decision`, `adr` | Decisions | Delivery, design, or architecture decisions |
+| `note`, `meeting`, `investigation`, `incident`, `plan`, `architecture`, `technical-design`, `as-built`, `handoff`, `conversation` | Notes | Use when the request is clearly that kind of note |
 
-```powershell
-python .\scripts\create_branium_note.py `
-  --cwd "C:\Users\Schalk\Code\AGR - SWOT Rewrite" `
-  --title "Fix rich text field save binding" `
-  --note-type change `
-  --body "## Context`n- ...`n`n## What Changed`n- ...`n`n## Verification`n- npm run build"
+Home types: `home-todo`, `home-shopping-list`, `home-document-register`, `home-important-information`, `home-maintenance-log`, `home-inventory`, `home-project`, `home-service-provider`, `home-routine`, `home-quick-note`, `home-note`. The script derives folder, default status, and tags from the type. `--status` overrides the default.
+
+## Creating the note
+
+Edit an existing Home register or list directly. For a new note, run the script so frontmatter, links, and filenames stay consistent. Use `--dry-run` first when the route is uncertain. Run it from the repo so `--cwd` defaults correctly, or pass `--cwd` explicitly.
+
+```bash
+python3 ~/.agents/skills/personal/document-branium/scripts/create_branium_note.py --title "Fix rich text field save binding" --note-type change --body-file note-body.md
 ```
 
-Home example for a new quick note:
+```bash
+python3 ~/.agents/skills/personal/document-branium/scripts/create_branium_note.py --area home --note-type home-quick-note --title "Garage shelf measurements" --body "## Note
+- 120 cm x 40 cm
 
-```powershell
-python .\scripts\create_branium_note.py `
-  --area home `
-  --note-type home-quick-note `
-  --title "Garage shelf measurements" `
-  --body "## Note`n- ...`n`n## Next Action`n- [ ] ..."
+## Next Action
+- [ ] Order brackets"
 ```
 
-The script requires the Brainium registry for project routing, creates the destination note-type folder if needed, writes a dated markdown note, and prints the created path. It derives folder, default status, and tags from the matching vault template; `--status` overrides that default. Home routing does not require the project registry.
+On Windows use `python` or `py` with the same flags. Write the body to a temporary file and pass `--body-file` when it contains quotes or is longer than a few lines. The script prints the created path. Source provenance records an external `--cwd` unchanged. From inside the vault it uses the registered `repoPath` or omits the source.
 
-Source provenance records an external `--cwd` unchanged. When `--cwd` is inside the Brainium vault, a project note uses the registered `repoPath` if one exists and otherwise omits `source_path` and `Source`; a Home note created from inside the vault also omits them. Use `--dry-run` before writing if the route looks uncertain.
+## Content
 
-## Templates
+Write only what was observed or supplied. Do not invent Dataverse, client, repo, provider, warranty, or document facts.
 
-Reusable Obsidian templates live in:
-
-```text
-C:\Users\Schalk\Documents\The Brainium\90 Templates
-```
-
-Use the closest template shape when creating a body for a specialized project note:
-
-- `Change Note.md` for implementation notes and fixes.
-- `Decision.md` for short delivery or design decisions.
-- `ADR.md` for architectural decision records.
-- `Meeting Note.md` for meeting notes and action capture.
-- `Investigation Note.md` for debugging, discovery, and evidence trails.
-- `Incident RCA.md` for incidents and root-cause analysis.
-- `Implementation Plan.md` for scoped plans.
-- `Architecture Note.md` for system or integration overviews.
-- `Technical Design.md` for proposed technical designs before or during implementation.
-- `As Built.md` for the implemented state after delivery.
-- `Handoff Note.md` for work transfer notes.
-- `Client Conversation.md` for stakeholder conversations.
-
-Use the Home-prefixed templates for Home content:
-
-- `Home Current Todo.md` for household action lists.
-- `Home Shopping List.md` for shopping/restock lists.
-- `Home Document Register.md` for documents, locations, and renewals.
-- `Home Important Information.md` for household reference information.
-- `Home Maintenance Log.md` for service history and recurring maintenance.
-- `Home Inventory.md` for valuables, serial numbers, receipts, and warranties.
-- `Home Project.md` for multi-step household work.
-- `Home Service Provider.md` for plumbers, electricians, insurance contacts, and similar providers.
-- `Home Routine.md` for repeatable household checklists.
-- `Home Quick Note.md` for temporary household capture.
-
-## Note Quality
-
-For project changes, prefer this shape:
+Project change shape:
 
 ```markdown
 ## Context
 - What triggered the work.
 
 ## What Changed
-- The concrete behavior or implementation change.
+- The concrete behaviour or implementation change.
 
 ## Files Touched
 - `path/to/file`
 
 ## Verification
-- Command or manual check.
+- Command or manual check. Say explicitly what was not run.
 
 ## Follow Up
 - Anything unresolved.
 ```
 
-For Home notes, prefer this shape:
+Home shape:
 
 ```markdown
 ## Context
 - What this is about.
 
 ## Details
-- The useful facts, dates, locations, costs, or provider information.
+- Facts needed to act later: date, provider, location, cost, renewal, status.
 
 ## Next Action
 - [ ] The next household action, if any.
@@ -222,4 +130,4 @@ For Home notes, prefer this shape:
 - [[100 Home/00 Home Dashboard|Home Dashboard]]
 ```
 
-Keep notes factual and short. A good Brainium note should be useful six months later without becoming a duplicate code review or an overgrown household database.
+For a specialized project type, follow the matching template in `90 Templates` (`ADR.md`, `Meeting Note.md`, `Investigation Note.md`, `Incident RCA.md`, and so on). Link the note to its client and project pages, or to the Home dashboard.

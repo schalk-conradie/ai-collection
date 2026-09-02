@@ -3,13 +3,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from datetime import date
 from pathlib import Path
 
 
-DEFAULT_VAULT = Path(r"C:\Users\Schalk\Documents\The Brainium")
+DEFAULT_VAULT = Path(os.environ.get("BRAINIUM_VAULT") or Path.home() / "Documents" / "The Brainium")
 REGISTRY_PATH = Path("99 Meta") / "project-registry.json"
 HOME_ROOT = Path("100 Home")
 NOTE_TYPES = {
@@ -155,6 +156,21 @@ def find_by_explicit(registry: list[dict], client: str, project: str) -> dict | 
     return None
 
 
+def repo_folder_name(repo_path: str) -> str:
+    return re.split(r"[\\/]", repo_path.rstrip("\\/"))[-1].casefold()
+
+
+def find_by_repo_name(registry: list[dict], cwd: Path) -> dict | None:
+    # Registry repoPath values are recorded on one machine (often Windows). When the
+    # prefix match fails on another machine, fall back to the repo folder name.
+    by_name = {repo_folder_name(entry["repoPath"]): entry for entry in registry if entry.get("repoPath")}
+    for candidate in (cwd, *cwd.parents):
+        entry = by_name.get(candidate.name.casefold())
+        if entry:
+            return entry
+    return None
+
+
 def find_by_cwd(registry: list[dict], cwd: Path) -> dict | None:
     cwd_key = normalized_path_key(cwd)
     matches: list[tuple[int, dict]] = []
@@ -166,7 +182,7 @@ def find_by_cwd(registry: list[dict], cwd: Path) -> dict | None:
         if cwd_key == repo_key or cwd_key.startswith(repo_key + "\\") or cwd_key.startswith(repo_key + "/"):
             matches.append((len(repo_key), entry))
     if not matches:
-        return None
+        return find_by_repo_name(registry, cwd)
     return sorted(matches, key=lambda item: item[0], reverse=True)[0][1]
 
 

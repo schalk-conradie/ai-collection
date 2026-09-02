@@ -24,11 +24,11 @@ class SearchBraniumTests(unittest.TestCase):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")
 
-    def write_registry(self, vault: Path, *, project_folder: str) -> None:
+    def write_registry(self, vault: Path, *, project_folder: str, repo_path: str | None = None) -> None:
         entry = {
             "client": "SBS",
             "project": "SBS - Application Forms",
-            "repoPath": str(vault / "repo"),
+            "repoPath": repo_path or str(vault / "repo"),
             "projectFolder": project_folder,
             "tags": ["client/sbs", "project/sbs-application-forms"],
         }
@@ -82,6 +82,26 @@ class SearchBraniumTests(unittest.TestCase):
         self.assertIn("SBS / SBS - Application Forms", result.stderr)
         self.assertIn("points to a missing project folder", result.stderr)
         self.assertIn(missing_folder, result.stderr.replace("\\", "/"))
+
+    def test_windows_repo_path_routes_by_folder_name(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            project_folder = "10 Clients/SBS/Projects/SBS - Application Forms"
+            self.write_registry(
+                vault,
+                project_folder=project_folder,
+                repo_path=r"C:\Users\Schalk\Code\SBS - Application Forms",
+            )
+            self.write_note(vault, f"{project_folder}/Notes/Application.md", "# Application\nneedle\n")
+            self.write_note(vault, "10 Clients/Other/Notes/Other.md", "# Other\nneedle\n")
+            cwd = vault / "Code" / "SBS - Application Forms" / "src"
+            result = self.run_script(vault, "--cwd", str(cwd), "--query", "needle", "--json")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["scope"], "project")
+        paths = [Path(item["relativePath"]).as_posix() for item in payload["results"]]
+        self.assertEqual(paths, [f"{project_folder}/Notes/Application.md"])
 
     def test_full_sbs_name_resolves_to_canonical_client_folder(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

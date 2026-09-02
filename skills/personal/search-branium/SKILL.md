@@ -1,126 +1,68 @@
 ---
 name: search-branium
-description: Search and retrieve relevant context from the user's Obsidian vault at `C:\Users\Schalk\Documents\The Brainium`. Use when the user asks to reference, look up, retrieve, search, recall, or find notes from Brainium or "branium", especially while working in a client/project repo or needing prior Home context such as todos, shopping lists, documents, maintenance, inventory, important household information, decisions, change notes, integration notes, or verification history.
+description: Search and read notes from the user's Obsidian vault, The Brainium, at ~/Documents/The Brainium. Use when the user asks to look up, recall, or find notes from Brainium or "branium", when starting work in a client or project repo that may have prior decisions or change notes, or when a Home question involves todos, shopping, documents, maintenance, inventory, or household information.
 ---
 
 # Search Branium
 
-## Overview
+Find the Brainium notes that matter before answering a project or Home question or making a change. Read the notes you rely on. Search results are a locator, not an answer.
 
-Use this skill to find useful Brainium notes before answering a project or Home question, or before making a change.
+## Vault layout
 
-The vault root is:
+The vault root is `~/Documents/The Brainium` on every machine. `BRAINIUM_VAULT` or `--vault` overrides it.
 
-```text
-C:\Users\Schalk\Documents\The Brainium
-```
-
-The project routing registry is used only for client/project search:
-
-```text
-C:\Users\Schalk\Documents\The Brainium\99 Meta\project-registry.json
-```
-
-## Home Structure
-
-The Home area lives under:
-
-```text
-C:\Users\Schalk\Documents\The Brainium\100 Home
-```
-
-Important Home entry points:
-
-| Need | Note |
+| Path | Purpose |
 | --- | --- |
-| Home dashboard / index | `100 Home/00 Home Dashboard.md` |
-| Current household actions | `100 Home/Tasks/Current Todo.md` |
-| Shopping and restock list | `100 Home/Lists/Shopping List.md` |
-| Important household reference info | `100 Home/Important Information/Important Information.md` |
+| `10 Clients/<Client>/Projects/<Client code> - <Project>/` | Client and project notes in `Changes`, `Decisions`, and `Notes`. |
+| `100 Home/` | Household notes. Active registers beat archived or dated notes when both match. |
+| `20 Research`, `30 Study`, `00 Inbox` | General knowledge notes. Included in whole-vault search. |
+| `99 Meta/project-registry.json` | Maps `repoPath` to `client`, `project`, and `projectFolder`. Used for scope routing. |
+
+Home entry points:
+
+| Content | Note |
+| --- | --- |
+| Dashboard | `100 Home/00 Home Dashboard.md` |
+| Current actions | `100 Home/Tasks/Current Todo.md` |
+| Shopping and restock | `100 Home/Lists/Shopping List.md` |
+| Household reference info | `100 Home/Important Information/Important Information.md` |
 | Document locations and renewals | `100 Home/Documents/Document Register.md` |
 | Repairs, service history, recurring care | `100 Home/Maintenance/Maintenance Log.md` |
-| Valuables, serial numbers, warranties | `100 Home/Inventory/Home Inventory.md` |
+| Valuables, serials, warranties | `100 Home/Inventory/Home Inventory.md` |
 | Multi-step household efforts | `100 Home/Projects/Home Projects.md` |
-| Temporary household inbox | `100 Home/Quick Notes/Home Quick Notes.md` |
-| Completed or stale Home notes | `100 Home/Archive/Home Archive.md` |
+| Unsorted capture | `100 Home/Quick Notes/Home Quick Notes.md` |
 
-Search `100 Home` directly when the user asks about home, household, personal admin, current todo, shopping, documents, important information, maintenance, inventory, routines, service providers, or quick notes.
+Client codes in folder names:
 
-## Project Folder Naming
-
-Project folders are generally named `Client - Project`, where the leading code maps to a default client context:
-
-| Code | Default client |
+| Code | Client |
 | --- | --- |
 | AGR | Allan Gray Retail |
 | AGI | Allan Gray Institutional |
 | E6 | Element 6 |
 | EC | Enterprise cloud |
-| SBS | SBS |
+| SBS | SBS (Stellenbosch Business School is an accepted alias) |
 
-`SBS` is the canonical client key and folder name; `Stellenbosch Business School` is accepted as a human-readable alias.
+When clear repo, folder, or vault evidence reveals a new code, update this table, the same table in `~/.agents/skills/personal/document-branium/SKILL.md`, and the vault `AGENTS.md`. Never infer a mapping from the code alone.
 
-When a clear repo, folder, or vault clue reveals a new code mapping, self-heal the convention by updating this section, the matching section in `C:\Users\Schalk\.agents\skills\personal\document-branium\SKILL.md`, and `C:\Users\Schalk\Documents\The Brainium\AGENTS.md`. Do not infer a new mapping from the code alone; ask if the evidence is unclear.
+## Searching
 
-## Workflow
+Search the narrowest scope that can hold the answer, then widen. Home first for household questions. The current project folder when the repo is registered. Then the client folder. Then the whole vault. Do not ask the user to pick a project when the registry can infer it.
 
-1. Understand what the user is trying to recall.
-   - Extract concrete search terms from repo names, client names, feature names, table/entity names, file names, errors, routes, business terms, household areas, document names, provider names, maintenance items, inventory items, and shopping/task wording.
-   - If the user is currently inside a repo, use the current directory as a project routing clue.
-   - If the user mentions Home or household terms, search `100 Home` first.
-   - If a repo or folder name follows `Client - Project`, use the project-folder naming map as a default client clue unless stronger observed evidence says otherwise.
-
-2. Search the narrowest useful scope first.
-   - If this is Home context, search the Home scope first.
-   - If `cwd` maps to a registry `repoPath`, search that project folder first.
-   - If that is too narrow, search the client folder.
-   - If still weak, search the whole vault.
-   - Do not ask the user to choose a project when the registry can infer it.
-
-3. Use `scripts/search_branium.py` for the first pass.
-
-Client/project example:
-
-```powershell
-python .\scripts\search_branium.py `
-  --cwd "C:\Users\Schalk\Code\AGR - SWOT Rewrite" `
-  --query "audit history rich text field"
+```bash
+python3 ~/.agents/skills/personal/search-branium/scripts/search_branium.py --query "audit history rich text field"
+python3 ~/.agents/skills/personal/search-branium/scripts/search_branium.py --scope home --query "insurance renewal"
+python3 ~/.agents/skills/personal/search-branium/scripts/search_branium.py --client "Element 6" --scope client --query "JDE"
+python3 ~/.agents/skills/personal/search-branium/scripts/search_branium.py --scope all --query "PRP2 Product Group" --json
 ```
 
-Home examples:
+On Windows use `python` or `py` with the same flags. `--cwd` defaults to the current directory, so run from the repo or pass it explicitly. An empty `--query` lists the most recent notes in scope.
 
-```powershell
-python .\scripts\search_branium.py --scope home --query "insurance renewal"
-python .\scripts\search_branium.py --scope home --query "shopping"
-python .\scripts\search_branium.py --scope home --query ""
-```
+Pull search terms from the real context: repo and client names, table or entity names, file names, error text, routes, business terms, provider names, item names. Multi-word queries need at least two terms to match a note unless the exact phrase appears.
 
-Useful options:
+`--scope auto` (the default) picks Home when `--cwd` is under `100 Home` or `--client Home` is passed, the project when `--cwd` matches the registry, the client when only `--client` is given, and the whole vault otherwise. Registry `repoPath` values are often Windows paths. The script matches them by prefix first, then by the last folder name against `--cwd` and its parents, which is how routing works on macOS.
 
-```powershell
-python .\scripts\search_branium.py --query "PRP2 Product Group" --scope all
-python .\scripts\search_branium.py --client "Element 6" --query "JDE" --scope client
-python .\scripts\search_branium.py --cwd "C:\Users\Schalk\Code\repo" --query "payment bypass" --scope project --json
-python .\scripts\search_branium.py --scope home --query "geyser" --json
-```
+The script skips `AGENTS.md`, `99 Meta`, `90 Templates`, `.obsidian`, and `*.excalidraw.md`. If a registry entry points to a missing project folder, it reports the client, project, and path instead of silently widening the search.
 
-4. Read the top matching notes before answering.
-   - Open full files for any result you rely on.
-   - For Home questions, prefer the active register/list note over an old archived or dated note when both match.
-   - Cite local file paths and line numbers in the final answer when useful.
-   - Say when no Brainium note was found, then continue from repo evidence or current Home structure if needed.
+## Answering
 
-## Search Behavior
-
-Default `--scope auto` means:
-
-- Search Home when `cwd` is inside `100 Home` or `--client Home` is passed.
-- Search the current project folder when `cwd` matches the registry.
-- Search the client folder when only `--client` is supplied.
-- Search the whole vault when no project, client, or Home mapping exists.
-
-Explicit `--scope home` searches only `100 Home` and skips template/config folders.
-
-Default knowledge search excludes `AGENTS.md`, `99 Meta`, `90 Templates`, application/config folders such as `.obsidian`, and `*.excalidraw.md` implementation files. Client, project, Home, Research, Study, Inbox, and other ordinary knowledge notes remain searchable. If a registry entry resolves but its `projectFolder` is missing, the script reports the affected client/project and path instead of silently widening the search.
-
-Do not treat the first match as truth. Use the snippets as a locator, then inspect the note itself if the answer depends on exact wording.
+Open the full note for anything you rely on. Cite vault-relative paths and line numbers when they help the user find the note. Say plainly when nothing relevant was found, then continue from repo evidence or the current Home structure.

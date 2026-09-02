@@ -1,8 +1,8 @@
-# Static shadcn Registry Workflow
+# Static shadcn registry workflow
 
 Use this reference when building a static registry for create-ec-app.
 
-## URL Model
+## URL model
 
 Publish static JSON files under `/r`:
 
@@ -12,7 +12,7 @@ Publish static JSON files under `/r`:
 
 The `{name}` placeholder is correct for `shadcn registry add`; it is not the URL to pass to create-ec-app.
 
-## Source Layout
+## Source layout
 
 Use nested manifests for anything larger than a tiny registry:
 
@@ -43,7 +43,7 @@ The shadcn build command resolves includes and writes static output:
 npx shadcn@latest build registry.json --output public/r
 ```
 
-## Root Manifest
+## Root manifest
 
 ```json
 {
@@ -59,7 +59,7 @@ npx shadcn@latest build registry.json --output public/r
 }
 ```
 
-## Component Import Rule
+## Component import rule
 
 For a new registry, always pull in every shadcn component from a temporary shadcn app:
 
@@ -69,7 +69,7 @@ npx shadcn@latest add --all
 
 Copy the resulting `components/ui`, `lib/utils.ts`, and any generated hooks into the registry source tree. Do not create a new registry from a manually selected subset of components.
 
-## Theme Item
+## Theme item
 
 Use a separate CSS file so installing a registry component adds the registry theme without overwriting the consumer app's base shadcn CSS.
 
@@ -146,7 +146,7 @@ The CSS file should include the Tailwind v4 layer, not import itself:
 }
 ```
 
-## Utility Item
+## Utility item
 
 ```json
 {
@@ -173,7 +173,7 @@ The CSS file should include the Tailwind v4 layer, not import itself:
 }
 ```
 
-## UI Item Pattern
+## UI item pattern
 
 Use full public URLs for same-registry dependencies:
 
@@ -203,7 +203,7 @@ Use full public URLs for same-registry dependencies:
 
 Bare names such as `"button"` or `"utils"` resolve against the built-in shadcn registry unless they are full namespace/GitHub/URL addresses.
 
-## GitHub Pages Workflow
+## GitHub Pages workflow
 
 Use this only when the project does not already have a Pages workflow:
 
@@ -261,10 +261,10 @@ npx shadcn@latest list @<namespace>
 npx shadcn@latest add @<namespace>/button
 ```
 
-For create-ec-app, create a fresh project under `/tmp` and pass the catalog URL:
+For create-ec-app, create a fresh project in a temporary folder outside the registry repo and pass the catalog URL:
 
 ```bash
-npx create-ec-app@latest /tmp/<slug>-consumer --shadcn-registry https://<owner>.github.io/<repo>/r/registry.json
+npx create-ec-app@latest <slug>-consumer --shadcn-registry https://<owner>.github.io/<repo>/r/registry.json
 ```
 
 Then verify:

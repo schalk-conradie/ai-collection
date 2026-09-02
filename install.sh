@@ -1,20 +1,32 @@
 #!/bin/sh
 
+# Bootstrap ~/.agents on macOS or Linux. install.ps1 does the same on Windows.
+# Everything canonical lives in ~/.agents; every other location only receives links.
+
 set -eu
 
 repo_url=${AGENTS_REPO_URL:-https://github.com/schalk-conradie/skills.git}
 agents_dir=${AGENTS_DIR:-"$HOME/.agents"}
 force=0
 
+# Harness adapters, one per line: <home dir under ~> <instructions file or -> <skills dir or -> <custom agents dir or ->
+# A line is applied only when the home dir exists. Harnesses that already scan ~/.agents/skills
+# (Codex, Cursor, Grok, OpenCode, Copilot) get "-" for skills.
+harness_table='
+.claude CLAUDE.md skills -
+.codex AGENTS.md - agents
+'
+
 usage() {
   cat <<'EOF'
 Usage: install.sh [--repo URL] [--force]
 
-Clone the personal agent configuration into ~/.agents and create these links:
-  ~/.codex/AGENTS.md   -> ~/.agents/AGENTS.md
-  ~/.codex/agents/*    -> ~/.agents/agents/*
-  ~/.claude/CLAUDE.md  -> ~/.agents/CLAUDE.md
-  ~/.claude/skills/*   -> ~/.agents/skills/personal/*
+Clone the personal agent configuration into ~/.agents, then link:
+  ~/.agents/skills/<name>   -> ~/.agents/skills/personal/<name>   (every skill, read by all harnesses)
+  ~/.claude/CLAUDE.md       -> ~/.agents/AGENTS.md                 (when ~/.claude exists)
+  ~/.claude/skills/<name>   -> ~/.agents/skills/personal/<name>    (when ~/.claude exists)
+  ~/.codex/AGENTS.md        -> ~/.agents/AGENTS.md                 (when ~/.codex exists)
+  ~/.codex/agents/<name>    -> ~/.agents/agents/<name>             (when ~/.codex exists)
 
 Options:
   --repo URL  Clone a different Git remote.
@@ -53,181 +65,140 @@ command -v git >/dev/null 2>&1 || fail "Git is required"
 
 if [ -d "$agents_dir/.git" ]; then
   printf 'Using existing repository: %s\n' "$agents_dir"
-elif [ -e "$agents_dir" ]; then
-  if [ -n "$(find "$agents_dir" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)" ]; then
-    fail "$agents_dir exists and is not a Git repository"
-  fi
-  git clone "$repo_url" "$agents_dir"
+elif [ -e "$agents_dir" ] && [ -n "$(find "$agents_dir" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)" ]; then
+  fail "$agents_dir exists and is not a Git repository"
 else
   git clone "$repo_url" "$agents_dir"
 fi
 
-agents_source="$agents_dir/AGENTS.md"
-claude_source="$agents_dir/CLAUDE.md"
+instructions_source="$agents_dir/AGENTS.md"
 skills_source="$agents_dir/skills/personal"
 custom_agents_source="$agents_dir/agents"
 
-[ -f "$agents_source" ] || fail "missing source file: $agents_source"
-[ -f "$claude_source" ] || fail "missing source file: $claude_source"
+[ -f "$instructions_source" ] || fail "missing source file: $instructions_source"
 [ -d "$skills_source" ] || fail "missing skills directory: $skills_source"
-[ -d "$custom_agents_source" ] || fail "missing custom agents directory: $custom_agents_source"
 
-canonical_file() {
+canonical_path() {
   file_dir=$(dirname "$1")
   file_name=$(basename "$1")
   printf '%s/%s\n' "$(cd "$file_dir" && pwd -P)" "$file_name"
 }
 
-link_matches() {
-  source_path=$(canonical_file "$1")
-  target_path=$2
-
-  if [ -L "$target_path" ]; then
-    link_value=$(readlink "$target_path")
-    case "$link_value" in
-      /*) resolved_path=$link_value ;;
-      *) resolved_path=$(dirname "$target_path")/$link_value ;;
-    esac
-    resolved_dir=$(dirname "$resolved_path")
-    resolved_name=$(basename "$resolved_path")
-    [ -d "$resolved_dir" ] || return 1
-    resolved_path=$(printf '%s/%s' "$(cd "$resolved_dir" && pwd -P)" "$resolved_name")
-    [ "$resolved_path" = "$source_path" ]
-    return
-  fi
-
-  [ -e "$target_path" ] && [ "$source_path" -ef "$target_path" ]
-}
-
 resolve_link_target() {
   target_path=$1
   [ -L "$target_path" ] || return 1
-
   link_value=$(readlink "$target_path")
   case "$link_value" in
     /*) resolved_path=$link_value ;;
     *) resolved_path=$(dirname "$target_path")/$link_value ;;
   esac
   resolved_dir=$(dirname "$resolved_path")
-  resolved_name=$(basename "$resolved_path")
   [ -d "$resolved_dir" ] || return 1
-  printf '%s/%s\n' "$(cd "$resolved_dir" && pwd -P)" "$resolved_name"
+  printf '%s/%s\n' "$(cd "$resolved_dir" && pwd -P)" "$(basename "$resolved_path")"
 }
 
-preflight_target() {
+link_matches() {
+  source_path=$(canonical_path "$1")
+  target_path=$2
+  if [ -L "$target_path" ]; then
+    resolved_path=$(resolve_link_target "$target_path") || return 1
+    [ "$resolved_path" = "$source_path" ]
+    return
+  fi
+  [ -e "$target_path" ] && [ "$source_path" -ef "$target_path" ]
+}
+
+preflight_link() {
   source_path=$1
   target_path=$2
-
   if [ -e "$target_path" ] || [ -L "$target_path" ]; then
-    if link_matches "$source_path" "$target_path"; then
-      return
-    fi
+    link_matches "$source_path" "$target_path" && return
     [ "$force" -eq 1 ] || fail "$target_path already exists; rerun with --force to back it up and replace it"
   fi
 }
 
 install_link() {
-  source_path=$(canonical_file "$1")
+  source_path=$(canonical_path "$1")
   target_path=$2
-
   if link_matches "$source_path" "$target_path"; then
     printf 'Link already correct: %s\n' "$target_path"
     return
   fi
-
   if [ -e "$target_path" ] || [ -L "$target_path" ]; then
     backup_path="$target_path.backup.$(date +%Y%m%d%H%M%S).$$"
     mv "$target_path" "$backup_path"
     printf 'Backed up conflict: %s\n' "$backup_path"
   fi
-
+  mkdir -p "$(dirname "$target_path")"
   ln -s "$source_path" "$target_path"
   printf 'Created link: %s -> %s\n' "$target_path" "$source_path"
 }
 
-remove_stale_skill_links() {
-  source_root=$(canonical_file "$1")
-  target_root=$2
-
-  [ -d "$target_root" ] || return
-  for target_path in "$target_root"/*; do
+# Remove links in target_root that point into source_root but no longer resolve to a
+# file or a skill directory. Links owned by other tools are left alone.
+remove_stale_links() {
+  target_root=$1
+  source_root=$(canonical_path "$2")
+  [ -d "$target_root" ] || return 0
+  for target_path in "$target_root"/* "$target_root"/.[!.]*; do
     [ -L "$target_path" ] || continue
     resolved_path=$(resolve_link_target "$target_path") || continue
     case "$resolved_path" in
-      "$source_root"/*)
-        if [ ! -f "$resolved_path/SKILL.md" ]; then
-          rm "$target_path"
-          printf 'Removed stale skill link: %s\n' "$target_path"
-        fi
-        ;;
+      "$source_root"/*) ;;
+      *) continue ;;
     esac
+    if [ ! -e "$resolved_path" ] || { [ -d "$resolved_path" ] && [ ! -f "$resolved_path/SKILL.md" ]; }; then
+      rm "$target_path"
+      printf 'Removed stale link: %s\n' "$target_path"
+    fi
   done
 }
 
-remove_stale_agent_links() {
-  source_root=$(canonical_file "$1")
-  target_root=$2
+# Emit "source<TAB>target" for every link to manage. Called twice: preflight, then install.
+plan_links() {
+  for skill_source in "$skills_source"/*; do
+    [ -f "$skill_source/SKILL.md" ] || continue
+    printf '%s\t%s\n' "$skill_source" "$agents_dir/skills/$(basename "$skill_source")"
+  done
 
-  [ -d "$target_root" ] || return
-  for target_path in "$target_root"/*.toml; do
-    [ -L "$target_path" ] || continue
-    resolved_path=$(resolve_link_target "$target_path") || continue
-    case "$resolved_path" in
-      "$source_root"/*)
-        if [ ! -f "$resolved_path" ]; then
-          rm "$target_path"
-          printf 'Removed stale custom agent link: %s\n' "$target_path"
-        fi
-        ;;
-    esac
+  printf '%s\n' "$harness_table" | while read -r home_dir instructions_file skills_dir agents_dir_name; do
+    [ -n "$home_dir" ] || continue
+    harness_home="$HOME/$home_dir"
+    [ -d "$harness_home" ] || continue
+    if [ "$instructions_file" != "-" ]; then
+      printf '%s\t%s\n' "$instructions_source" "$harness_home/$instructions_file"
+    fi
+    if [ "$skills_dir" != "-" ]; then
+      for skill_source in "$skills_source"/*; do
+        [ -f "$skill_source/SKILL.md" ] || continue
+        printf '%s\t%s\n' "$skill_source" "$harness_home/$skills_dir/$(basename "$skill_source")"
+      done
+    fi
+    if [ "$agents_dir_name" != "-" ] && [ -d "$custom_agents_source" ]; then
+      for agent_source in "$custom_agents_source"/*; do
+        [ -f "$agent_source" ] || continue
+        printf '%s\t%s\n' "$agent_source" "$harness_home/$agents_dir_name/$(basename "$agent_source")"
+      done
+    fi
   done
 }
 
-codex_target="$HOME/.codex/AGENTS.md"
-claude_target="$HOME/.claude/CLAUDE.md"
-claude_skills="$HOME/.claude/skills"
-codex_agents="$HOME/.codex/agents"
+[ -n "$(plan_links)" ] || fail "no skills found in $skills_source"
 
-preflight_target "$agents_source" "$codex_target"
-preflight_target "$claude_source" "$claude_target"
-
-skills_found=0
-for skill_source in "$skills_source"/*; do
-  [ -d "$skill_source" ] || continue
-  [ -f "$skill_source/SKILL.md" ] || continue
-  skills_found=1
-  skill_name=$(basename "$skill_source")
-  preflight_target "$skill_source" "$claude_skills/$skill_name"
-done
-[ "$skills_found" -eq 1 ] || fail "no skills found in $skills_source"
-
-agents_found=0
-for custom_agent_source in "$custom_agents_source"/*.toml; do
-  [ -f "$custom_agent_source" ] || continue
-  agents_found=1
-  custom_agent_name=$(basename "$custom_agent_source")
-  preflight_target "$custom_agent_source" "$codex_agents/$custom_agent_name"
-done
-[ "$agents_found" -eq 1 ] || fail "no custom agents found in $custom_agents_source"
-
-mkdir -p "$HOME/.codex" "$codex_agents" "$HOME/.claude" "$claude_skills"
-install_link "$agents_source" "$codex_target"
-install_link "$claude_source" "$claude_target"
-
-for custom_agent_source in "$custom_agents_source"/*.toml; do
-  [ -f "$custom_agent_source" ] || continue
-  custom_agent_name=$(basename "$custom_agent_source")
-  install_link "$custom_agent_source" "$codex_agents/$custom_agent_name"
+tab=$(printf '\t')
+plan_links | while IFS="$tab" read -r source_path target_path; do
+  preflight_link "$source_path" "$target_path"
 done
 
-for skill_source in "$skills_source"/*; do
-  [ -d "$skill_source" ] || continue
-  [ -f "$skill_source/SKILL.md" ] || continue
-  skill_name=$(basename "$skill_source")
-  install_link "$skill_source" "$claude_skills/$skill_name"
+plan_links | while IFS="$tab" read -r source_path target_path; do
+  install_link "$source_path" "$target_path"
 done
 
-remove_stale_skill_links "$skills_source" "$claude_skills"
-remove_stale_agent_links "$custom_agents_source" "$codex_agents"
+remove_stale_links "$agents_dir/skills" "$skills_source"
+printf '%s\n' "$harness_table" | while read -r home_dir instructions_file skills_dir agents_dir_name; do
+  [ -n "$home_dir" ] && [ -d "$HOME/$home_dir" ] || continue
+  [ "$skills_dir" = "-" ] || remove_stale_links "$HOME/$home_dir/$skills_dir" "$skills_source"
+  [ "$agents_dir_name" = "-" ] || remove_stale_links "$HOME/$home_dir/$agents_dir_name" "$custom_agents_source"
+done
 
 printf 'Agent configuration is ready. Edit shared files in %s.\n' "$agents_dir"

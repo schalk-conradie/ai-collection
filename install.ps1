@@ -1,3 +1,6 @@
+# Bootstrap ~/.agents on Windows (PowerShell 7 or Windows PowerShell 5.1). install.sh does the same on macOS and Linux.
+# Everything canonical lives in ~/.agents; every other location only receives links.
+
 [CmdletBinding()]
 param(
     [string]$RepoUrl = $(if ($env:AGENTS_REPO_URL) { $env:AGENTS_REPO_URL } else { "https://github.com/schalk-conradie/skills.git" }),
@@ -7,51 +10,45 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Harness adapters. A row is applied only when the home dir exists. Harnesses that already scan
+# ~/.agents/skills (Codex, Cursor, Grok, OpenCode, Copilot) leave Skills empty.
+$harnessTable = @(
+    @{ Home = ".claude"; Instructions = "CLAUDE.md"; Skills = "skills"; Agents = "" }
+    @{ Home = ".codex"; Instructions = "AGENTS.md"; Skills = ""; Agents = "agents" }
+)
+
 function Resolve-LinkTarget {
-    param(
-        [System.IO.FileSystemInfo]$Item,
-        [string]$Target
-    )
+    param([System.IO.FileSystemInfo]$Item)
 
     if ($Item.LinkType -notin @("SymbolicLink", "Junction")) {
         return $null
     }
-
     $linkTarget = [string]$Item.Target
     if (-not [IO.Path]::IsPathRooted($linkTarget)) {
-        $linkTarget = Join-Path (Split-Path -Parent $Target) $linkTarget
+        $linkTarget = Join-Path (Split-Path -Parent $Item.FullName) $linkTarget
     }
     return [IO.Path]::GetFullPath($linkTarget)
 }
 
 function Test-LinkMatches {
-    param(
-        [string]$Source,
-        [string]$Target
-    )
+    param([string]$Source, [string]$Target)
 
     $item = Get-Item -LiteralPath $Target -Force -ErrorAction SilentlyContinue
     if (-not $item) {
         return $false
     }
-
     $sourcePath = [IO.Path]::GetFullPath($Source)
     if ($item.LinkType -in @("SymbolicLink", "Junction")) {
-        return (Resolve-LinkTarget -Item $item -Target $Target) -eq $sourcePath
+        return (Resolve-LinkTarget -Item $item) -eq $sourcePath
     }
-
     if ($item.LinkType -eq "HardLink" -and -not $item.PSIsContainer) {
         return (Get-FileHash -LiteralPath $Target).Hash -eq (Get-FileHash -LiteralPath $Source).Hash
     }
-
     return $false
 }
 
 function Assert-TargetAvailable {
-    param(
-        [string]$Source,
-        [string]$Target
-    )
+    param([string]$Source, [string]$Target)
 
     $item = Get-Item -LiteralPath $Target -Force -ErrorAction SilentlyContinue
     if ($item -and -not (Test-LinkMatches -Source $Source -Target $Target) -and -not $Force) {
@@ -60,38 +57,57 @@ function Assert-TargetAvailable {
 }
 
 function Install-PathLink {
-    param(
-        [string]$Source,
-        [string]$Target,
-        [switch]$Directory
-    )
+    param([string]$Source, [string]$Target)
 
     if (Test-LinkMatches -Source $Source -Target $Target) {
         Write-Host "Link already correct: $Target"
         return
     }
-
     $item = Get-Item -LiteralPath $Target -Force -ErrorAction SilentlyContinue
     if ($item) {
-        $stamp = Get-Date -Format "yyyyMMddHHmmss"
-        $backup = "$Target.backup.$stamp.$PID"
+        $backup = "$Target.backup.$(Get-Date -Format 'yyyyMMddHHmmss').$PID"
         Move-Item -LiteralPath $Target -Destination $backup
         Write-Host "Backed up conflict: $backup"
     }
-
+    New-Item -ItemType Directory -Path (Split-Path -Parent $Target) -Force | Out-Null
+    $isDirectory = Test-Path -LiteralPath $Source -PathType Container
     try {
         New-Item -ItemType SymbolicLink -Path $Target -Target $Source -ErrorAction Stop | Out-Null
-        Write-Host "Created symbolic link: $Target -> $Source"
+        Write-Host "Created link: $Target -> $Source"
     }
     catch {
         try {
-            $fallbackType = if ($Directory) { "Junction" } else { "HardLink" }
+            $fallbackType = if ($isDirectory) { "Junction" } else { "HardLink" }
             New-Item -ItemType $fallbackType -Path $Target -Target $Source -ErrorAction Stop | Out-Null
-            Write-Warning "Windows denied a symbolic link, so the installer created a $fallbackType link: $Target"
-            Write-Warning "Enable Windows Developer Mode and rerun with -Force if you prefer a symbolic link."
+            Write-Warning "Symbolic links are not permitted, so a $fallbackType was created instead: $Target"
+            Write-Warning "Enable Windows Developer Mode and rerun with -Force to replace it with a symbolic link."
         }
         catch {
             throw "Could not link $Target to $Source. Enable Windows Developer Mode or run PowerShell as Administrator."
+        }
+    }
+}
+
+# Remove links in TargetRoot that point into SourceRoot but no longer resolve to a file or a skill
+# directory. Links owned by other tools are left alone.
+function Remove-StaleLinks {
+    param([string]$TargetRoot, [string]$SourceRoot)
+
+    if (-not (Test-Path -LiteralPath $TargetRoot -PathType Container)) {
+        return
+    }
+    $sourceRootPath = [IO.Path]::GetFullPath($SourceRoot).TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+    $comparison = if ($env:OS -eq "Windows_NT") { [StringComparison]::OrdinalIgnoreCase } else { [StringComparison]::Ordinal }
+    foreach ($entry in Get-ChildItem -LiteralPath $TargetRoot -Force) {
+        $resolved = Resolve-LinkTarget -Item $entry
+        if (-not $resolved -or -not $resolved.StartsWith($sourceRootPath, $comparison)) {
+            continue
+        }
+        $isDirectory = Test-Path -LiteralPath $resolved -PathType Container
+        $stale = -not (Test-Path -LiteralPath $resolved) -or ($isDirectory -and -not (Test-Path -LiteralPath (Join-Path $resolved "SKILL.md") -PathType Leaf))
+        if ($stale) {
+            Remove-Item -LiteralPath $entry.FullName -Force
+            Write-Host "Removed stale link: $($entry.FullName)"
         }
     }
 }
@@ -100,38 +116,23 @@ if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
     throw "Git is required."
 }
 
-$gitDirectory = Join-Path $AgentsDir ".git"
-if (Test-Path -LiteralPath $gitDirectory -PathType Container) {
+if (Test-Path -LiteralPath (Join-Path $AgentsDir ".git") -PathType Container) {
     Write-Host "Using existing repository: $AgentsDir"
 }
-elseif (Test-Path -LiteralPath $AgentsDir) {
-    $firstEntry = Get-ChildItem -LiteralPath $AgentsDir -Force | Select-Object -First 1
-    if ($firstEntry) {
-        throw "$AgentsDir exists and is not a Git repository."
-    }
-    & git clone -- $RepoUrl $AgentsDir
-    if ($LASTEXITCODE -ne 0) { throw "git clone failed with exit code $LASTEXITCODE" }
+elseif ((Test-Path -LiteralPath $AgentsDir) -and (Get-ChildItem -LiteralPath $AgentsDir -Force | Select-Object -First 1)) {
+    throw "$AgentsDir exists and is not a Git repository."
 }
 else {
     & git clone -- $RepoUrl $AgentsDir
     if ($LASTEXITCODE -ne 0) { throw "git clone failed with exit code $LASTEXITCODE" }
 }
 
-$agentsSource = Join-Path $AgentsDir "AGENTS.md"
-$claudeSource = Join-Path $AgentsDir "CLAUDE.md"
+$instructionsSource = Join-Path $AgentsDir "AGENTS.md"
 $skillsSource = Join-Path $AgentsDir "skills/personal"
 $customAgentsSource = Join-Path $AgentsDir "agents"
-if (-not (Test-Path -LiteralPath $agentsSource -PathType Leaf)) { throw "Missing source file: $agentsSource" }
-if (-not (Test-Path -LiteralPath $claudeSource -PathType Leaf)) { throw "Missing source file: $claudeSource" }
+if (-not (Test-Path -LiteralPath $instructionsSource -PathType Leaf)) { throw "Missing source file: $instructionsSource" }
 if (-not (Test-Path -LiteralPath $skillsSource -PathType Container)) { throw "Missing skills directory: $skillsSource" }
-if (-not (Test-Path -LiteralPath $customAgentsSource -PathType Container)) { throw "Missing custom agents directory: $customAgentsSource" }
 
-$codexDirectory = Join-Path $HOME ".codex"
-$claudeDirectory = Join-Path $HOME ".claude"
-$claudeSkills = Join-Path $claudeDirectory "skills"
-$codexTarget = Join-Path $codexDirectory "AGENTS.md"
-$codexAgents = Join-Path $codexDirectory "agents"
-$claudeTarget = Join-Path $claudeDirectory "CLAUDE.md"
 $skillSources = @(
     Get-ChildItem -LiteralPath $skillsSource -Directory |
         Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName "SKILL.md") -PathType Leaf } |
@@ -139,67 +140,46 @@ $skillSources = @(
 )
 if ($skillSources.Count -eq 0) { throw "No skills found in $skillsSource" }
 $customAgentSources = @(
-    Get-ChildItem -LiteralPath $customAgentsSource -File -Filter "*.toml" |
-        Sort-Object Name
+    if (Test-Path -LiteralPath $customAgentsSource -PathType Container) {
+        Get-ChildItem -LiteralPath $customAgentsSource -File | Sort-Object Name
+    }
 )
-if ($customAgentSources.Count -eq 0) { throw "No custom agents found in $customAgentsSource" }
 
-Assert-TargetAvailable -Source $agentsSource -Target $codexTarget
-Assert-TargetAvailable -Source $claudeSource -Target $claudeTarget
-foreach ($customAgentSource in $customAgentSources) {
-    Assert-TargetAvailable -Source $customAgentSource.FullName -Target (Join-Path $codexAgents $customAgentSource.Name)
+# Every link to manage, built once and applied in two passes: preflight, then install.
+$plan = [System.Collections.Generic.List[object]]::new()
+foreach ($skill in $skillSources) {
+    $plan.Add(@{ Source = $skill.FullName; Target = Join-Path (Join-Path $AgentsDir "skills") $skill.Name })
 }
-foreach ($skillSource in $skillSources) {
-    Assert-TargetAvailable -Source $skillSource.FullName -Target (Join-Path $claudeSkills $skillSource.Name)
-}
-
-New-Item -ItemType Directory -Path $codexDirectory -Force | Out-Null
-New-Item -ItemType Directory -Path $codexAgents -Force | Out-Null
-New-Item -ItemType Directory -Path $claudeDirectory -Force | Out-Null
-New-Item -ItemType Directory -Path $claudeSkills -Force | Out-Null
-Install-PathLink -Source $agentsSource -Target $codexTarget
-Install-PathLink -Source $claudeSource -Target $claudeTarget
-foreach ($customAgentSource in $customAgentSources) {
-    Install-PathLink -Source $customAgentSource.FullName -Target (Join-Path $codexAgents $customAgentSource.Name)
-}
-foreach ($skillSource in $skillSources) {
-    Install-PathLink -Source $skillSource.FullName -Target (Join-Path $claudeSkills $skillSource.Name) -Directory
-}
-
-$skillsRootPath = [IO.Path]::GetFullPath($skillsSource).TrimEnd(
-    [IO.Path]::DirectorySeparatorChar,
-    [IO.Path]::AltDirectorySeparatorChar
-) + [IO.Path]::DirectorySeparatorChar
-$comparison = if ($env:OS -eq "Windows_NT") {
-    [StringComparison]::OrdinalIgnoreCase
-}
-else {
-    [StringComparison]::Ordinal
-}
-foreach ($entry in Get-ChildItem -LiteralPath $claudeSkills -Force) {
-    $resolvedTarget = Resolve-LinkTarget -Item $entry -Target $entry.FullName
-    if (-not $resolvedTarget -or -not $resolvedTarget.StartsWith($skillsRootPath, $comparison)) {
-        continue
+$activeHarnesses = @($harnessTable | Where-Object { Test-Path -LiteralPath (Join-Path $HOME $_.Home) -PathType Container })
+foreach ($harness in $activeHarnesses) {
+    $harnessHome = Join-Path $HOME $harness.Home
+    if ($harness.Instructions) {
+        $plan.Add(@{ Source = $instructionsSource; Target = Join-Path $harnessHome $harness.Instructions })
     }
-    if (-not (Test-Path -LiteralPath (Join-Path $resolvedTarget "SKILL.md") -PathType Leaf)) {
-        Remove-Item -LiteralPath $entry.FullName -Force
-        Write-Host "Removed stale skill link: $($entry.FullName)"
+    if ($harness.Skills) {
+        foreach ($skill in $skillSources) {
+            $plan.Add(@{ Source = $skill.FullName; Target = Join-Path (Join-Path $harnessHome $harness.Skills) $skill.Name })
+        }
+    }
+    if ($harness.Agents) {
+        foreach ($agent in $customAgentSources) {
+            $plan.Add(@{ Source = $agent.FullName; Target = Join-Path (Join-Path $harnessHome $harness.Agents) $agent.Name })
+        }
     }
 }
 
-$customAgentsRootPath = [IO.Path]::GetFullPath($customAgentsSource).TrimEnd(
-    [IO.Path]::DirectorySeparatorChar,
-    [IO.Path]::AltDirectorySeparatorChar
-) + [IO.Path]::DirectorySeparatorChar
-foreach ($entry in Get-ChildItem -LiteralPath $codexAgents -File -Filter "*.toml" -Force) {
-    $resolvedTarget = Resolve-LinkTarget -Item $entry -Target $entry.FullName
-    if (-not $resolvedTarget -or -not $resolvedTarget.StartsWith($customAgentsRootPath, $comparison)) {
-        continue
-    }
-    if (-not (Test-Path -LiteralPath $resolvedTarget -PathType Leaf)) {
-        Remove-Item -LiteralPath $entry.FullName -Force
-        Write-Host "Removed stale custom agent link: $($entry.FullName)"
-    }
+foreach ($link in $plan) {
+    Assert-TargetAvailable -Source $link.Source -Target $link.Target
+}
+foreach ($link in $plan) {
+    Install-PathLink -Source $link.Source -Target $link.Target
+}
+
+Remove-StaleLinks -TargetRoot (Join-Path $AgentsDir "skills") -SourceRoot $skillsSource
+foreach ($harness in $activeHarnesses) {
+    $harnessHome = Join-Path $HOME $harness.Home
+    if ($harness.Skills) { Remove-StaleLinks -TargetRoot (Join-Path $harnessHome $harness.Skills) -SourceRoot $skillsSource }
+    if ($harness.Agents) { Remove-StaleLinks -TargetRoot (Join-Path $harnessHome $harness.Agents) -SourceRoot $customAgentsSource }
 }
 
 Write-Host "Agent configuration is ready. Edit shared files in $AgentsDir."
