@@ -104,7 +104,9 @@ function Remove-StaleLinks {
             continue
         }
         $isDirectory = Test-Path -LiteralPath $resolved -PathType Container
-        $stale = -not (Test-Path -LiteralPath $resolved) -or ($isDirectory -and -not (Test-Path -LiteralPath (Join-Path $resolved "SKILL.md") -PathType Leaf))
+        $stale = -not (Test-Path -LiteralPath $resolved) -or
+            ($isDirectory -and -not (Test-Path -LiteralPath (Join-Path $resolved "SKILL.md") -PathType Leaf)) -or
+            (-not $isDirectory -and [IO.Path]::GetExtension($resolved) -ne ".toml")
         if ($stale) {
             Remove-Item -LiteralPath $entry.FullName -Force
             Write-Host "Removed stale link: $($entry.FullName)"

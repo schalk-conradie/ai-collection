@@ -147,7 +147,7 @@ remove_stale_links() {
       "$source_root"/*) ;;
       *) continue ;;
     esac
-    if [ ! -e "$resolved_path" ] || { [ -d "$resolved_path" ] && [ ! -f "$resolved_path/SKILL.md" ]; }; then
+    if [ ! -e "$resolved_path" ] || { [ -d "$resolved_path" ] && [ ! -f "$resolved_path/SKILL.md" ]; } || { [ -f "$resolved_path" ] && [ "${resolved_path%.toml}" = "$resolved_path" ]; }; then
       rm "$target_path"
       printf 'Removed stale link: %s\n' "$target_path"
     fi
@@ -175,7 +175,7 @@ plan_links() {
       done
     fi
     if [ "$agents_dir_name" != "-" ] && [ -d "$custom_agents_source" ]; then
-      for agent_source in "$custom_agents_source"/*; do
+      for agent_source in "$custom_agents_source"/*.toml; do
         [ -f "$agent_source" ] || continue
         printf '%s\t%s\n' "$agent_source" "$harness_home/$agents_dir_name/$(basename "$agent_source")"
       done
