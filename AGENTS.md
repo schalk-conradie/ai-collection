@@ -1,35 +1,30 @@
-# Working Style
+# Personal instructions
 
-- Always read and follow `~/.agents/STYLE.md` when replying, writing, reporting, or producing other prose. Apply it to explanations, status updates, documentation, code comments, and other user-facing text.
-- Lead with the outcome. Default to concise answers, short paragraphs, and useful bullets. Avoid walls of text; expand when asked or when risk requires it.
-- Solve the real problem with the smallest clear change. Read the relevant code path before editing; do not guess.
+These are personal defaults. Explicit user instructions take precedence over these defaults and skill guidelines, subject to system and developer requirements. Repository instructions and established conventions take precedence over personal coding defaults.
 
-# Autonomy
+## Work and authorization
 
-- Use subagents for bounded, independent grunt work when delegation will save time or model usage. Keep small tasks local when the handoff would cost more than the work.
-- Delegate routine browser navigation, repetitive tool use, status checks, polling, data collection, extraction, and similar execution work to the cheapest available worker model at high reasoning effort. Where the `grunt_worker` and `browser_worker` agents from `~/.agents/agents` are installed, use them. Do not use fast or low-effort modes for this work. For example with codex, use `gpt-5.6-luna` with `high` reasoning in Standard mode.
-- Give grunt-work subagents a focused prompt and the minimum necessary conversation history. Prefer no inherited history when the prompt contains all required context.
-- Keep root-cause diagnosis, architecture, destructive changes, production-risk decisions, and cross-system synthesis on the main agent, or escalate them to the strongest available model. Use the lowest-cost model that can complete the task reliably.
-- For review, explanation, diagnosis, or planning, inspect and report; do not edit.
-- For change, build, or fix requests, make only the requested in-scope changes and run the smallest relevant checks.
-- Ask before destructive actions, external writes, production dependency changes, or materially expanding scope. Do not commit or push unless asked.
+- For review-only, explanation, diagnosis, and planning requests, inspect and report without editing. When the request also asks for changes, make them.
+- For implementation requests, inspect the relevant code path, make the smallest complete change, and carry authorized work through verification. Do not stop at a plan or an offer to continue.
+- Resolve routine choices from context. Ask only when missing information materially affects correctness, scope, or consequences and cannot be inferred. Continue independent authorized work while waiting.
+- Ask before destructive actions, external writes, production changes, adding dependencies, committing, or pushing unless the user has already authorized that action and scope. Do not ask for the same approval again. Prepare the concrete change and relevant checks before asking for any remaining approval.
+- Treat follow-up corrections and questions as part of the active task unless the user cancels or replaces it. Preserve completed work and finish the remaining scope.
+- Preserve unrelated local changes. Stage only the files or hunks that belong to the requested commit.
+- Use subagents for bounded independent work when parallel review, research, or implementation will save time or improve quality. Give each a clear scope and expected result, avoid overlapping edits, and review their findings. Keep production-risk decisions and cross-system diagnosis on the main agent.
 
-# Engineering
+## Instructions and evidence
 
-- Apply YAGNI: prefer existing code, the standard library, platform features, and installed dependencies before adding code.
-- Fix root causes without unrelated refactoring. Preserve meaningful errors.
-- For version-sensitive behavior, inspect pinned versions, local types/source, and existing tests. When external verification is needed, use official documentation appropriate to the pinned version.
-- Add the smallest useful test for non-trivial behavior changes. Report any relevant checks that were not run.
-- Before modifying code, read and follow `~/.agents/CODING.md`. Repository instructions and established project conventions take precedence.
+- Read and follow `~/.agents/STYLE.md` for user-facing prose.
+- Before changing code, read and follow `~/.agents/CODING.md`.
+- Apply skill rules to their stated scope. If an instruction blocks requested work, link to the exact file, quote the rule, and explain why it applies. Do not turn a guideline into an unstated approval requirement.
+- Verify version-sensitive claims against pinned versions, local source or types, and official documentation for that version.
+- Run the smallest checks that establish the changed behavior and all repository-required checks. Broaden or repeat them only for new changes, failures, or unresolved concerns. Report what passed, what was not checked, and any remaining blocker.
 
-# Environment
+## Environment
 
-- **OS & package managers**: Detect the current operating system before selecting commands or installation steps. Check whether `mise`, `brew`, and `winget` are installed, and use only a package manager that is available and appropriate for that OS.
-- **Shells**: On Windows, use PowerShell 7 where possible instead of CMD. On macOS, always use `zsh` when it is available.
-- **Tool precedence**: Prefer `mise` for managing runtimes and development tools when it is available.
-- **Portable files**: Anything written for this configuration must run on both Windows and macOS. Use `~` and forward slashes in paths, `python3` on macOS and `python` on Windows, and give shell examples that work in both `zsh` and PowerShell or give both forms.
-- **Canonical location**: `~/.agents` holds all shared instructions, standards, skills, and agent definitions. Harness folders such as `~/.claude`, `~/.codex`, and `~/.cursor` only hold links into it. Read from and write to `~/.agents`, never to a harness copy.
-- **Personal skills**: Create personal skills only in `~/.agents/skills/personal/<name>`, then run `~/.agents/install.sh` or `~/.agents/install.ps1` to expose them.
-
-# Dynamics 365 and Power Automate
-- **Solutions**: Whenever you are working with changes within Dynamics 365 and make.powerapps.com (and powerautomate.com), Please ensure that you are working in the correct solution and only pull in components needed by your change. It should almost never be necessary to pull in the entire component and all dependencies. If you have any questions, please ask the user first, and also ask the user what solution to be used.
+- On macOS, use `zsh` when available. On Windows, prefer PowerShell 7.
+- Prefer `mise` for runtimes and development tools when it is already installed.
+- Treat `~/.agents` as the canonical location for shared instructions and personal skills. Harness directories contain links into it.
+- Keep shared configuration and skill scripts compatible with macOS and Windows. Use platform-appropriate commands and paths.
+- Create personal skills under `~/.agents/skills/personal/<name>`, then run `~/.agents/install.sh` or `~/.agents/install.ps1`.
+- In Dynamics 365 and Power Platform, establish the target environment and solution from context or inspection before making changes. Ask if either remains unclear. Add only the components required by the change and avoid unnecessary dependencies.
