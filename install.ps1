@@ -106,7 +106,13 @@ function Remove-StaleLinks {
         $stale = -not (Test-Path -LiteralPath $resolved -PathType Container) -or
             -not (Test-Path -LiteralPath (Join-Path $resolved "SKILL.md") -PathType Leaf)
         if ($stale) {
-            Remove-Item -LiteralPath $entry.FullName -Force
+            if ($entry.PSIsContainer) {
+                # Delete only the directory link, without PowerShell 5.1's child-item prompt.
+                [IO.Directory]::Delete($entry.FullName)
+            }
+            else {
+                Remove-Item -LiteralPath $entry.FullName -Force
+            }
             Write-Host "Removed stale link: $($entry.FullName)"
         }
     }
