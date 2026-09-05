@@ -9,12 +9,12 @@ repo_url=${AGENTS_REPO_URL:-https://github.com/schalk-conradie/skills.git}
 agents_dir=${AGENTS_DIR:-"$HOME/.agents"}
 force=0
 
-# Harness adapters, one per line: <home dir under ~> <instructions file or -> <skills dir or -> <custom agents dir or ->
+# Harness adapters, one per line: <home dir under ~> <instructions file or -> <skills dir or ->
 # A line is applied only when the home dir exists. Harnesses that already scan ~/.agents/skills
 # (Codex, Cursor, Grok, OpenCode, Copilot) get "-" for skills.
 harness_table='
-.claude CLAUDE.md skills -
-.codex AGENTS.md - agents
+.claude CLAUDE.md skills
+.codex AGENTS.md -
 '
 
 usage() {
@@ -26,7 +26,6 @@ Clone the personal agent configuration into ~/.agents, then link:
   ~/.claude/CLAUDE.md       -> ~/.agents/AGENTS.md                 (when ~/.claude exists)
   ~/.claude/skills/<name>   -> ~/.agents/skills/personal/<name>    (when ~/.claude exists)
   ~/.codex/AGENTS.md        -> ~/.agents/AGENTS.md                 (when ~/.codex exists)
-  ~/.codex/agents/<name>    -> ~/.agents/agents/<name>             (when ~/.codex exists)
 
 Options:
   --repo URL  Clone a different Git remote.
@@ -73,7 +72,6 @@ fi
 
 instructions_source="$agents_dir/AGENTS.md"
 skills_source="$agents_dir/skills/personal"
-custom_agents_source="$agents_dir/agents"
 
 [ -f "$instructions_source" ] || fail "missing source file: $instructions_source"
 [ -d "$skills_source" ] || fail "missing skills directory: $skills_source"
@@ -135,7 +133,7 @@ install_link() {
 }
 
 # Remove links in target_root that point into source_root but no longer resolve to a
-# file or a skill directory. Links owned by other tools are left alone.
+# skill directory. Links owned by other tools are left alone.
 remove_stale_links() {
   target_root=$1
   source_root=$(canonical_path "$2")
@@ -147,7 +145,7 @@ remove_stale_links() {
       "$source_root"/*) ;;
       *) continue ;;
     esac
-    if [ ! -e "$resolved_path" ] || { [ -d "$resolved_path" ] && [ ! -f "$resolved_path/SKILL.md" ]; } || { [ -f "$resolved_path" ] && [ "${resolved_path%.toml}" = "$resolved_path" ]; }; then
+    if [ ! -d "$resolved_path" ] || [ ! -f "$resolved_path/SKILL.md" ]; then
       rm "$target_path"
       printf 'Removed stale link: %s\n' "$target_path"
     fi
@@ -161,7 +159,7 @@ plan_links() {
     printf '%s\t%s\n' "$skill_source" "$agents_dir/skills/$(basename "$skill_source")"
   done
 
-  printf '%s\n' "$harness_table" | while read -r home_dir instructions_file skills_dir agents_dir_name; do
+  printf '%s\n' "$harness_table" | while read -r home_dir instructions_file skills_dir; do
     [ -n "$home_dir" ] || continue
     harness_home="$HOME/$home_dir"
     [ -d "$harness_home" ] || continue
@@ -172,12 +170,6 @@ plan_links() {
       for skill_source in "$skills_source"/*; do
         [ -f "$skill_source/SKILL.md" ] || continue
         printf '%s\t%s\n' "$skill_source" "$harness_home/$skills_dir/$(basename "$skill_source")"
-      done
-    fi
-    if [ "$agents_dir_name" != "-" ] && [ -d "$custom_agents_source" ]; then
-      for agent_source in "$custom_agents_source"/*.toml; do
-        [ -f "$agent_source" ] || continue
-        printf '%s\t%s\n' "$agent_source" "$harness_home/$agents_dir_name/$(basename "$agent_source")"
       done
     fi
   done
@@ -195,10 +187,9 @@ plan_links | while IFS="$tab" read -r source_path target_path; do
 done
 
 remove_stale_links "$agents_dir/skills" "$skills_source"
-printf '%s\n' "$harness_table" | while read -r home_dir instructions_file skills_dir agents_dir_name; do
+printf '%s\n' "$harness_table" | while read -r home_dir instructions_file skills_dir; do
   [ -n "$home_dir" ] && [ -d "$HOME/$home_dir" ] || continue
   [ "$skills_dir" = "-" ] || remove_stale_links "$HOME/$home_dir/$skills_dir" "$skills_source"
-  [ "$agents_dir_name" = "-" ] || remove_stale_links "$HOME/$home_dir/$agents_dir_name" "$custom_agents_source"
 done
 
 printf 'Agent configuration is ready. Edit shared files in %s.\n' "$agents_dir"

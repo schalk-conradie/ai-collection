@@ -5,7 +5,6 @@ One repository, cloned to `~/.agents`, that every coding agent on every machine 
 - shared working instructions in [`AGENTS.md`](AGENTS.md)
 - personal coding standards in [`CODING.md`](CODING.md) and the writing guide in [`STYLE.md`](STYLE.md)
 - personal [Agent Skills](https://agentskills.io) under [`skills/personal/`](skills/personal/)
-- worker agent definitions under [`agents/`](agents/)
 - pet assets under [`pets/`](pets/)
 
 `~/.agents` is the only place to edit. Harness folders such as `~/.claude` or `~/.codex` only ever hold links into it. The repo works the same on Windows and macOS: paths use `~`, scripts run under `python3` on macOS and `python` on Windows, and each installer does exactly the same thing.
@@ -39,7 +38,6 @@ The installers never name a skill. They loop over whatever is in the folders.
 | `~/.claude/CLAUDE.md` | `~/.agents/AGENTS.md` | `~/.claude` exists |
 | `~/.claude/skills/<name>` | `~/.agents/skills/personal/<name>` | `~/.claude` exists. Claude Code does not read `~/.agents/skills`. |
 | `~/.codex/AGENTS.md` | `~/.agents/AGENTS.md` | `~/.codex` exists |
-| `~/.codex/agents/<file>` | `~/.agents/agents/<file>` | `~/.codex` exists |
 
 The harness table sits at the top of each installer. Adding a harness is one row. Installers only remove links that point into `~/.agents` and no longer resolve; links owned by other tools are left alone.
 
@@ -72,12 +70,6 @@ python3 -m unittest discover -s skills/personal/document-branium/tests
 python3 -m unittest discover -s skills/personal/search-branium/tests
 ```
 
-## Worker agents
-
-`agents/` holds two optional worker definitions: `grunt_worker` for bounded file discovery, log collection, repetitive checks, and extraction, and `browser_worker` for read-only browser navigation and data collection. Request delegation explicitly in your prompt and name a worker when you want that role. Browser work stays in the main session so you can follow it unless you specifically request a browser worker.
-
-The definitions use the Codex custom-agent format, so the installer links them only where `~/.codex` exists. Other harnesses follow the same instruction to delegate only when explicitly requested, using their available capabilities.
-
 ## Repository layout
 
 ```
@@ -85,7 +77,6 @@ The definitions use the Codex custom-agent format, so the installer links them o
 ├── AGENTS.md        # Shared agent instructions
 ├── CODING.md        # Personal coding standards
 ├── STYLE.md         # Writing guide
-├── agents/          # Worker agent definitions
 ├── install.sh       # macOS and Linux bootstrap
 ├── install.ps1      # Windows bootstrap, same behaviour
 ├── pets/            # Pet assets

@@ -11,7 +11,6 @@ These are personal defaults. Explicit user instructions take precedence over the
 - Obtain explicit confirmation for the target environment and action before changing production systems or data, or triggering a production deployment. A general implementation or fix request does not authorize production changes or deployment. Prepare the concrete change and relevant checks first. Do not ask again when that production action and scope have already been explicitly confirmed.
 - Treat follow-up corrections and questions as part of the active task unless the user cancels or replaces it. Preserve completed work and finish the remaining scope.
 - Preserve unrelated local changes. Stage only the files or hunks that belong to the requested commit.
-- Use subagents only when explicitly requested by the user. Give each a bounded scope and expected result, avoid overlapping edits, and review their findings. Keep production-risk decisions and cross-system diagnosis on the main agent. Keep browser work in the main session so the user can follow it, unless the user specifically requests a browser worker.
 
 ## Instructions and evidence
 

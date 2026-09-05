@@ -13,8 +13,8 @@ $ErrorActionPreference = "Stop"
 # Harness adapters. A row is applied only when the home dir exists. Harnesses that already scan
 # ~/.agents/skills (Codex, Cursor, Grok, OpenCode, Copilot) leave Skills empty.
 $harnessTable = @(
-    @{ Home = ".claude"; Instructions = "CLAUDE.md"; Skills = "skills"; Agents = "" }
-    @{ Home = ".codex"; Instructions = "AGENTS.md"; Skills = ""; Agents = "agents" }
+    @{ Home = ".claude"; Instructions = "CLAUDE.md"; Skills = "skills" }
+    @{ Home = ".codex"; Instructions = "AGENTS.md"; Skills = "" }
 )
 
 function Resolve-LinkTarget {
@@ -88,7 +88,7 @@ function Install-PathLink {
     }
 }
 
-# Remove links in TargetRoot that point into SourceRoot but no longer resolve to a file or a skill
+# Remove links in TargetRoot that point into SourceRoot but no longer resolve to a skill
 # directory. Links owned by other tools are left alone.
 function Remove-StaleLinks {
     param([string]$TargetRoot, [string]$SourceRoot)
@@ -103,10 +103,8 @@ function Remove-StaleLinks {
         if (-not $resolved -or -not $resolved.StartsWith($sourceRootPath, $comparison)) {
             continue
         }
-        $isDirectory = Test-Path -LiteralPath $resolved -PathType Container
-        $stale = -not (Test-Path -LiteralPath $resolved) -or
-            ($isDirectory -and -not (Test-Path -LiteralPath (Join-Path $resolved "SKILL.md") -PathType Leaf)) -or
-            (-not $isDirectory -and [IO.Path]::GetExtension($resolved) -ne ".toml")
+        $stale = -not (Test-Path -LiteralPath $resolved -PathType Container) -or
+            -not (Test-Path -LiteralPath (Join-Path $resolved "SKILL.md") -PathType Leaf)
         if ($stale) {
             Remove-Item -LiteralPath $entry.FullName -Force
             Write-Host "Removed stale link: $($entry.FullName)"
@@ -131,7 +129,6 @@ else {
 
 $instructionsSource = Join-Path $AgentsDir "AGENTS.md"
 $skillsSource = Join-Path $AgentsDir "skills/personal"
-$customAgentsSource = Join-Path $AgentsDir "agents"
 if (-not (Test-Path -LiteralPath $instructionsSource -PathType Leaf)) { throw "Missing source file: $instructionsSource" }
 if (-not (Test-Path -LiteralPath $skillsSource -PathType Container)) { throw "Missing skills directory: $skillsSource" }
 
@@ -141,11 +138,6 @@ $skillSources = @(
         Sort-Object Name
 )
 if ($skillSources.Count -eq 0) { throw "No skills found in $skillsSource" }
-$customAgentSources = @(
-    if (Test-Path -LiteralPath $customAgentsSource -PathType Container) {
-        Get-ChildItem -LiteralPath $customAgentsSource -File | Sort-Object Name
-    }
-)
 
 # Every link to manage, built once and applied in two passes: preflight, then install.
 $plan = [System.Collections.Generic.List[object]]::new()
@@ -163,11 +155,6 @@ foreach ($harness in $activeHarnesses) {
             $plan.Add(@{ Source = $skill.FullName; Target = Join-Path (Join-Path $harnessHome $harness.Skills) $skill.Name })
         }
     }
-    if ($harness.Agents) {
-        foreach ($agent in $customAgentSources) {
-            $plan.Add(@{ Source = $agent.FullName; Target = Join-Path (Join-Path $harnessHome $harness.Agents) $agent.Name })
-        }
-    }
 }
 
 foreach ($link in $plan) {
@@ -181,7 +168,6 @@ Remove-StaleLinks -TargetRoot (Join-Path $AgentsDir "skills") -SourceRoot $skill
 foreach ($harness in $activeHarnesses) {
     $harnessHome = Join-Path $HOME $harness.Home
     if ($harness.Skills) { Remove-StaleLinks -TargetRoot (Join-Path $harnessHome $harness.Skills) -SourceRoot $skillsSource }
-    if ($harness.Agents) { Remove-StaleLinks -TargetRoot (Join-Path $harnessHome $harness.Agents) -SourceRoot $customAgentsSource }
 }
 
 Write-Host "Agent configuration is ready. Edit shared files in $AgentsDir."
