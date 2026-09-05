@@ -42,11 +42,11 @@ These are personal defaults. Repository instructions and established conventions
 
 ### Functions and abstractions
 
-- Do not add generic type parameters for a single concrete caller.
-- Keep one-use functions next to their caller unless extracting one names a concept the caller needs.
-- Do not create `utils.ts`, `helpers.ts`, barrel `index.ts` files, or `*Helper`, `*Util`, `*Manager`, and `*Service` modules for one-off code.
-- Do not wrap one `fetch` call in a client class, one function in a class, or a plain value in a getter.
-- Do not add single-field options objects or flags nobody passes.
+- Add generic type parameters only when they preserve useful type relationships or satisfy a current contract. Caller count alone does not determine their value.
+- Keep one-use functions next to their caller unless extraction clarifies a domain concept or boundary.
+- Avoid `utils.ts`, `helpers.ts`, barrel `index.ts` files, or `*Helper`, `*Util`, `*Manager`, and `*Service` modules for one-off code unless they clarify a current contract or boundary, or follow an established project convention.
+- Do not wrap one `fetch` call in a client class, one function in a class, or a plain value in a getter without a current benefit, such as handling a boundary or satisfying a framework contract.
+- Use an options object when named fields make the call clearer, even for one field. Do not add flags nobody passes.
 - Await returned promises when local error handling or resource cleanup depends on their completion. Elsewhere, follow the repository's `return await` convention.
 - Use specific names. Avoid `data`, `result`, `item`, `temp`, `value`, `handleX`, `processY`, and `doZ` when the domain provides a name.
 
@@ -56,8 +56,8 @@ These are personal defaults. Repository instructions and established conventions
 - Preserve the original error with `cause` when adding context.
 - Do not log an error and then continue as if the operation succeeded.
 - Keep catch variables as `unknown` and narrow them.
-- Do not invent `Result`, `Either`, or a custom error hierarchy for one call site.
-- Share error-formatting code only after it repeats more than twice.
+- Do not invent `Result`, `Either`, or a custom error hierarchy without a current benefit to the contract or error handling.
+- Share error-formatting code when it removes meaningful duplication or gives a boundary a consistent error format.
 
 ### Platform features
 

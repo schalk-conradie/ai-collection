@@ -74,7 +74,9 @@ python3 -m unittest discover -s skills/personal/search-branium/tests
 
 ## Worker agents
 
-`agents/` holds two agent definitions that `AGENTS.md` refers to by role: `grunt_worker` for bounded file discovery, log collection, repetitive checks, and extraction, and `browser_worker` for read-only browser navigation and data collection. They are written in the Codex custom-agent format, so the installer links them only where `~/.codex` exists. Other harnesses get the same behaviour from the delegation rules in `AGENTS.md`.
+`agents/` holds two optional worker definitions: `grunt_worker` for bounded file discovery, log collection, repetitive checks, and extraction, and `browser_worker` for read-only browser navigation and data collection. Request delegation explicitly in your prompt and name a worker when you want that role. Browser work stays in the main session so you can follow it unless you specifically request a browser worker.
+
+The definitions use the Codex custom-agent format, so the installer links them only where `~/.codex` exists. Other harnesses follow the same instruction to delegate only when explicitly requested, using their available capabilities.
 
 ## Repository layout
 
