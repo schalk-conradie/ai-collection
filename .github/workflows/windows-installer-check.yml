@@ -21,6 +21,7 @@ jobs:
       - name: Exercise the pinned installer on Windows
         shell: pwsh
         env:
+          TEST_REVISION: ${{ github.sha }}
           TEST_SHELL: ${{ matrix.shell }}
           LINK_MODE: ${{ matrix.link_mode }}
         run: |
@@ -35,7 +36,7 @@ jobs:
           $sourceRepo = Join-Path $env:RUNNER_TEMP "source repo"
           git clone --quiet --no-checkout https://github.com/schalk-conradie/skills.git $sourceRepo
           if ($LASTEXITCODE -ne 0) { throw "Source clone failed" }
-          git -C $sourceRepo checkout --quiet a0b5aa26de6be2ff630d00782b2b70277141d898
+          git -C $sourceRepo checkout --quiet $env:TEST_REVISION
           if ($LASTEXITCODE -ne 0) { throw "Pinned checkout failed" }
           $installer = Join-Path $sourceRepo "install.ps1"
           $tokens = $null
@@ -43,7 +44,7 @@ jobs:
           [System.Management.Automation.Language.Parser]::ParseFile($installer, [ref]$tokens, [ref]$parseErrors) > $null
           Assert-True ($parseErrors.Count -eq 0) "Installer parse errors: $parseErrors"
 
-          $installRoot = Join-Path $env:RUNNER_TEMP "installed agents"
+          $installRoot = Join-Path $HOME "installed agents test"
           $codexRoot = Join-Path $HOME ".codex"
           $claudeRoot = Join-Path $HOME ".claude"
           foreach ($harnessRoot in @($codexRoot, $claudeRoot)) {
@@ -61,7 +62,7 @@ jobs:
           }
           & $installer -RepoUrl $sourceRepo -AgentsDir $installRoot
           $installedHead = git -C $installRoot rev-parse HEAD
-          Assert-True ($installedHead -eq "a0b5aa26de6be2ff630d00782b2b70277141d898") "Wrong installed revision"
+          Assert-True ($installedHead -eq $env:TEST_REVISION) "Wrong installed revision"
           $expectedFileType = if ($env:LINK_MODE -eq "fallback") { "HardLink" } else { "SymbolicLink" }
           $expectedDirectoryType = if ($env:LINK_MODE -eq "fallback") { "Junction" } else { "SymbolicLink" }
           foreach ($instructionPath in @((Join-Path $codexRoot "AGENTS.md"), (Join-Path $claudeRoot "CLAUDE.md"))) {
